@@ -6036,6 +6036,65 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
   return "_" + String(profileId).replace(/[^a-zA-Z0-9_]/g, "");
 }
 
+function normalizeHeaderKey_(h) {
+  return String(h || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function formatCellDate_(rawVal, tz) {
+  if (rawVal === null || rawVal === undefined || rawVal === "") return "";
+  if (rawVal instanceof Date) {
+    if (isNaN(rawVal.getTime())) return "";
+    return Utilities.formatDate(rawVal, tz || "GMT-3", "yyyy-MM-dd");
+  }
+  var s = String(rawVal).trim();
+  if (s.indexOf("'") === 0) s = s.substring(1).trim();
+  if (!s) return "";
+  if (s.indexOf("T") !== -1) {
+    var isoPart = s.split("T")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoPart)) return isoPart;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (s.indexOf("/") !== -1) {
+    var p = s.split("/");
+    if (p.length === 3) {
+      if (p[0].length === 4) {
+        return p[0] + "-" + ("0" + p[1]).slice(-2) + "-" + ("0" + p[2]).slice(-2);
+      } else {
+        return p[2] + "-" + ("0" + p[1]).slice(-2) + "-" + ("0" + p[0]).slice(-2);
+      }
+    }
+  }
+  var parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    return Utilities.formatDate(parsed, tz || "GMT-3", "yyyy-MM-dd");
+  }
+  return s;
+}
+
+function parseCellNumber_(val) {
+  if (typeof val === "number") return isNaN(val) ? 0 : val;
+  if (val === null || val === undefined || val === "") return 0;
+  var s = String(val).replace(/[R$\s]/g, "").trim();
+  if (s.indexOf(",") !== -1 && s.indexOf(".") !== -1) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.indexOf(",") !== -1) {
+    s = s.replace(",", ".");
+  }
+  var n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseCellBool_(val) {
+  if (val === true) return true;
+  if (!val) return false;
+  var s = String(val).trim().toLowerCase();
+  return (s === "sim" || s === "true" || s === "1" || s === "yes" || s === "quitado" || s === "pago");
+}
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -6053,7 +6112,13 @@ function doPost(e) {
     var sheetTx = ss.getSheetByName("Historico_Lancamentos" + suffix);
     if (!sheetTx) sheetTx = ss.insertSheet("Historico_Lancamentos" + suffix);
     sheetTx.clearContents();
-    var headersTx = ["ID", "Ano", "Mês", "Data Operação", "Vencimento", "Descrição", "Observações", "Tipo", "Forma Pagamento", "Categoria", "Subcategoria", "Valor Original", "Juros/Multas", "Impostos", "Valor Total", "Quitado", "CardId", "IsFixed", "FixedSeriesId", "IsRefund", "ParcelaAtual", "TotalParcelas"];
+    var headersTx = [
+      "ID", "Ano", "Mês", "Data Operação", "Vencimento", "Descrição", "Observações",
+      "Tipo", "Forma Pagamento", "Categoria", "Subcategoria", "Valor Original",
+      "Juros/Multas", "Impostos", "Valor Total", "Quitado", "CardId",
+      "IsFixed", "FixedSeriesId", "IsRefund", "ParcelaAtual", "TotalParcelas",
+      "TransferDirection"
+    ];
     sheetTx.appendRow(headersTx);
 
     if (data.transactions && data.transactions.length > 0) {
@@ -6067,29 +6132,38 @@ function doPost(e) {
         if (rawDate.indexOf("T") !== -1) rawDate = rawDate.split("T")[0];
         var formattedDate = rawDate ? "'" + rawDate : "";
 
+        var origVal = parseCellNumber_(t.originalAmount !== undefined ? t.originalAmount : t.amount);
+        var jurosVal = parseCellNumber_(t.interestPenalty);
+        var taxVal = parseCellNumber_(t.taxes);
+        var totVal = parseCellNumber_(t.amount);
+        if (!totVal && (origVal || jurosVal || taxVal)) {
+          totVal = origVal + jurosVal + taxVal;
+        }
+
         rowsTx.push([
           t.id || "",
-          t.year || 2026,
+          Number(t.year) || 2026,
           (t.month !== undefined ? Number(t.month) : 0),
           formattedOpDate,
           formattedDate,
           t.description || "",
           t.notes || "",
-          t.type || "",
-          t.paymentMethod || "",
+          t.type || "expense",
+          t.paymentMethod || "bank",
           t.categoryId || "",
           t.subcategoryId || "",
-          t.originalAmount || t.amount || 0,
-          t.interestPenalty || 0,
-          t.taxes || 0,
-          t.amount || 0,
+          origVal,
+          jurosVal,
+          taxVal,
+          totVal,
           t.paid ? "Sim" : "Não",
           t.cardId || "",
           t.isFixed ? "Sim" : "Não",
           t.fixedSeriesId || "",
           t.isRefund ? "Sim" : "Não",
-          t.currentInstallment || 1,
-          t.totalInstallments || 1
+          Number(t.currentInstallment) || 1,
+          Number(t.totalInstallments) || 1,
+          t.transferDirection || ""
         ]);
       });
       sheetTx.getRange(2, 1, rowsTx.length, headersTx.length).setValues(rowsTx);
@@ -6140,6 +6214,7 @@ function doPost(e) {
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var tz = ss.getSpreadsheetTimeZone() || "GMT-3";
     var profileId = (e && e.parameter && e.parameter.profileId) ? String(e.parameter.profileId) : "default";
     var suffix = getSheetSuffix_(profileId);
 
@@ -6164,7 +6239,7 @@ function doGet(e) {
           try { bankAccountConfig = JSON.parse(metaVals[m][1]); } catch(ex) {}
         }
         if (metaVals[m][0] === "walletBalance") {
-          walletBalance = Number(metaVals[m][1]) || 0;
+          walletBalance = parseCellNumber_(metaVals[m][1]);
         }
       }
     }
@@ -6179,62 +6254,122 @@ function doGet(e) {
     }
 
     var txs = [];
+    var headersList = [];
+    var rawRowsList = [];
     var sheetTx = ss.getSheetByName("Historico_Lancamentos" + suffix);
-    if (sheetTx) {
+
+    if (sheetTx && sheetTx.getLastRow() >= 1) {
       var data = sheetTx.getDataRange().getValues();
-      var hasOpDateCol = data[0] && data[0][3] === "Data Operação";
+      headersList = data[0].map(function(h) { return String(h || ""); });
+
+      // Mapeamento inteligente pelo nome do cabeçalho (evita desalinhamento entre versões)
+      var colMap = {};
+      headersList.forEach(function(h, idx) {
+        colMap[normalizeHeaderKey_(h)] = idx;
+      });
+
+      function findCol(aliases, fallbackIdx) {
+        for (var a = 0; a < aliases.length; a++) {
+          var key = normalizeHeaderKey_(aliases[a]);
+          if (colMap[key] !== undefined) return colMap[key];
+        }
+        return fallbackIdx;
+      }
+
+      var hasOpCol = colMap["dataoperacao"] !== undefined;
+      var off = hasOpCol ? 1 : 0;
+
+      var idxId = findCol(["id"], 0);
+      var idxYear = findCol(["ano", "year"], 1);
+      var idxMonth = findCol(["mes", "month"], 2);
+      var idxOpDate = findCol(["dataoperacao", "operationdate"], hasOpCol ? 3 : -1);
+      var idxDueDate = findCol(["vencimento", "datavencimento", "duedate"], 3 + off);
+      var idxDesc = findCol(["descricao", "description", "historico"], 4 + off);
+      var idxNotes = findCol(["observacoes", "notes", "obs"], 5 + off);
+      var idxType = findCol(["tipo", "type"], 6 + off);
+      var idxPayMethod = findCol(["formapagamento", "paymentmethod", "pagamento"], 7 + off);
+      var idxCat = findCol(["categoria", "categoryid", "category"], 8 + off);
+      var idxSubcat = findCol(["subcategoria", "subcategoryid", "subcategory"], 9 + off);
+      var idxOrigAmt = findCol(["valororiginal", "originalamount"], 10 + off);
+      var idxInterest = findCol(["jurosmultas", "juros", "interestpenalty"], 11 + off);
+      var idxTaxes = findCol(["impostos", "taxes", "ir"], 12 + off);
+      var idxAmount = findCol(["valortotal", "amount", "valor"], 13 + off);
+      var idxPaid = findCol(["quitado", "paid", "pago", "status"], 14 + off);
+      var idxCardId = findCol(["cardid", "cartao", "idcartao"], 15 + off);
+      var idxIsFixed = findCol(["isfixed", "fixa", "lancamentofixo"], 16 + off);
+      var idxFixedSeries = findCol(["fixedseriesid", "serieid"], 17 + off);
+      var idxIsRefund = findCol(["isrefund", "estorno"], 18 + off);
+      var idxCurInst = findCol(["parcelaatual", "currentinstallment"], 19 + off);
+      var idxTotInst = findCol(["totalparcelas", "totalinstallments"], 20 + off);
+      var idxTransfDir = findCol(["transferdirection", "sentidotransferencia"], 21 + off);
+
+      var monthNamesNorm = ["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
       for (var i = 1; i < data.length; i++) {
         var row = data[i];
+        var isRowEmpty = row.every(function(cell) { return cell === "" || cell === null || cell === undefined; });
+        if (isRowEmpty) continue;
 
-        var rawOpD = hasOpDateCol ? row[3] : "";
-        var cleanOpDate = "";
-        if (rawOpD instanceof Date) {
-          cleanOpDate = Utilities.formatDate(rawOpD, ss.getSpreadsheetTimeZone() || "GMT-3", "yyyy-MM-dd");
-        } else if (rawOpD) {
-          var strOp = String(rawOpD).trim();
-          if (strOp.indexOf("'") === 0) strOp = strOp.substring(1);
-          if (strOp.indexOf("T") !== -1) cleanOpDate = strOp.split("T")[0];
-          else cleanOpDate = strOp;
+        rawRowsList.push(row.map(function(cell) {
+          return (cell instanceof Date) ? formatCellDate_(cell, tz) : cell;
+        }));
+
+        var cleanOpDate = idxOpDate >= 0 ? formatCellDate_(row[idxOpDate], tz) : "";
+        var cleanDate = idxDueDate >= 0 ? formatCellDate_(row[idxDueDate], tz) : "";
+
+        var yr = Number(row[idxYear]) || 2026;
+        var rawM = row[idxMonth];
+        var mo = 0;
+        if (typeof rawM === "number") {
+          mo = rawM;
+        } else if (rawM !== "" && rawM !== null && rawM !== undefined) {
+          var mNorm = normalizeHeaderKey_(rawM);
+          var mFound = monthNamesNorm.indexOf(mNorm);
+          mo = mFound !== -1 ? mFound : (Number(rawM) || 0);
         }
 
-        var dueColIdx = hasOpDateCol ? 4 : 3;
-        var rawD = row[dueColIdx];
-        var cleanDate = "";
-        if (rawD instanceof Date) {
-          cleanDate = Utilities.formatDate(rawD, ss.getSpreadsheetTimeZone() || "GMT-3", "yyyy-MM-dd");
-        } else if (rawD) {
-          var strD = String(rawD).trim();
-          if (strD.indexOf("'") === 0) strD = strD.substring(1);
-          if (strD.indexOf("T") !== -1) cleanDate = strD.split("T")[0];
-          else cleanDate = strD;
+        if (cleanDate && cleanDate.indexOf("-") !== -1) {
+          var dp = cleanDate.split("-");
+          if (dp.length === 3) {
+            yr = Number(dp[0]) || yr;
+            mo = (Number(dp[1]) - 1);
+          }
         }
 
-        var offset = hasOpDateCol ? 1 : 0;
+        var vOrig = idxOrigAmt >= 0 ? parseCellNumber_(row[idxOrigAmt]) : 0;
+        var vJuros = idxInterest >= 0 ? parseCellNumber_(row[idxInterest]) : 0;
+        var vTaxes = idxTaxes >= 0 ? parseCellNumber_(row[idxTaxes]) : 0;
+        var vTot = idxAmount >= 0 ? parseCellNumber_(row[idxAmount]) : 0;
+        if (!vTot && (vOrig || vJuros || vTaxes)) {
+          vTot = vOrig + vJuros + vTaxes;
+        } else if (!vOrig && vTot) {
+          vOrig = Math.max(0, vTot - vJuros - vTaxes);
+        }
 
         txs.push({
-          id: String(row[0]),
-          year: Number(row[1]) || 2026,
-          month: Number(row[2]) || 0,
+          id: String(row[idxId] || ("tx_restored_" + i)),
+          year: yr,
+          month: mo,
           operationDate: cleanOpDate || cleanDate,
-          dueDate: cleanDate,
-          description: String(row[3 + offset]),
-          notes: String(row[4 + offset] || ""),
-          type: String(row[5 + offset]),
-          paymentMethod: String(row[6 + offset]),
-          categoryId: String(row[7 + offset]),
-          subcategoryId: String(row[8 + offset]),
-          originalAmount: Number(row[9 + offset]) || 0,
-          interestPenalty: Number(row[10 + offset]) || 0,
-          taxes: Number(row[11 + offset]) || 0,
-          amount: Number(row[12 + offset]) || 0,
-          paid: (String(row[13 + offset]).toLowerCase() === "sim" || row[13 + offset] === true),
-          cardId: String(row[14 + offset] || ""),
-          isFixed: (String(row[15 + offset]).toLowerCase() === "sim" || row[15 + offset] === true),
-          fixedSeriesId: String(row[16 + offset] || ""),
-          isRefund: (String(row[17 + offset]).toLowerCase() === "sim" || row[17 + offset] === true),
-          currentInstallment: Number(row[18 + offset]) || 1,
-          totalInstallments: Number(row[19 + offset]) || 1
+          dueDate: cleanDate || cleanOpDate,
+          description: String(row[idxDesc] || ""),
+          notes: idxNotes >= 0 ? String(row[idxNotes] || "") : "",
+          type: String(row[idxType] || "expense"),
+          paymentMethod: String(row[idxPayMethod] || "bank"),
+          categoryId: String(row[idxCat] || ""),
+          subcategoryId: String(row[idxSubcat] || ""),
+          originalAmount: vOrig,
+          interestPenalty: vJuros,
+          taxes: vTaxes,
+          amount: vTot,
+          paid: idxPaid >= 0 ? parseCellBool_(row[idxPaid]) : false,
+          cardId: idxCardId >= 0 ? String(row[idxCardId] || "") : "",
+          isFixed: idxIsFixed >= 0 ? parseCellBool_(row[idxIsFixed]) : false,
+          fixedSeriesId: idxFixedSeries >= 0 ? String(row[idxFixedSeries] || "") : "",
+          isRefund: idxIsRefund >= 0 ? parseCellBool_(row[idxIsRefund]) : false,
+          currentInstallment: idxCurInst >= 0 ? (Number(row[idxCurInst]) || 1) : 1,
+          totalInstallments: idxTotInst >= 0 ? (Number(row[idxTotInst]) || 1) : 1,
+          transferDirection: idxTransfDir >= 0 ? String(row[idxTransfDir] || "") : ""
         });
       }
     }
@@ -6262,6 +6397,8 @@ function doGet(e) {
       profileId: profileId,
       lastModified: lastModified,
       profiles: profiles,
+      headers: headersList,
+      rawRows: rawRowsList,
       transactions: txs,
       categories: categories,
       creditCards: creditCards,
@@ -7678,7 +7815,7 @@ function doGet(e) {
             saveToLocalStorage();
             const payload = {
                 app: 'Planilha de Orçamento Pessoal',
-                version: '54-55',
+                version: '54-56',
                 exportedAt: new Date().toISOString(),
                 state: {
                     selectedYear: appState.selectedYear,
@@ -8180,7 +8317,8 @@ function doGet(e) {
                         fixedSeriesId: t.fixedSeriesId || '',
                         isRefund: !!t.isRefund,
                         currentInstallment: t.currentInstallment || 1,
-                        totalInstallments: t.totalInstallments || 1
+                        totalInstallments: t.totalInstallments || 1,
+                        transferDirection: t.transferDirection || ''
                     };
                 })
             };
@@ -8301,6 +8439,34 @@ function doGet(e) {
                             else if (payMethod.includes('cart') || t.cardId) payMethod = 'card';
                             else payMethod = 'bank';
 
+                            // Garante vínculo correto de Categoria/Subcategoria tanto por ID quanto por Nome
+                            let resolvedCatId = String(t.categoryId || '').trim();
+                            let matchedCat = appState.categories.find(c => c.id === resolvedCatId);
+                            if (!matchedCat && resolvedCatId) {
+                                matchedCat = appState.categories.find(c => c.name.toLowerCase() === resolvedCatId.toLowerCase());
+                                if (matchedCat) resolvedCatId = matchedCat.id;
+                            }
+                            if (!matchedCat) {
+                                resolvedCatId = (t.type === 'income') ? 'cat_salario' : (t.type === 'investment' || t.type === 'transfer' ? 'cat_investimentos' : 'cat_moradia');
+                                matchedCat = appState.categories.find(c => c.id === resolvedCatId);
+                            }
+
+                            let resolvedSubId = String(t.subcategoryId || '').trim();
+                            if (resolvedSubId && matchedCat && Array.isArray(matchedCat.subcategories)) {
+                                const subById = matchedCat.subcategories.find(s => s.id === resolvedSubId);
+                                if (!subById) {
+                                    const subByName = matchedCat.subcategories.find(s => s.name.toLowerCase() === resolvedSubId.toLowerCase());
+                                    if (subByName) resolvedSubId = subByName.id;
+                                }
+                            }
+
+                            // Normaliza Tipo (suporta tanto 'expense'/'income' quanto 'Despesa'/'Receita')
+                            let rawType = String(t.type || 'expense').trim().toLowerCase();
+                            if (rawType.startsWith('rec')) rawType = 'income';
+                            else if (rawType.startsWith('desp')) rawType = 'expense';
+                            else if (rawType.startsWith('inv')) rawType = 'investment';
+                            else if (rawType.startsWith('transf')) rawType = 'transfer';
+
                             return {
                                 id: t.id || String(Date.now() + Math.random()),
                                 description: t.description || 'Lançamento',
@@ -8313,9 +8479,9 @@ function doGet(e) {
                                 year: resolvedYear,
                                 operationDate: cleanOpDate,
                                 dueDate: cleanDueDate,
-                                categoryId: t.categoryId || 'cat_moradia',
-                                subcategoryId: t.subcategoryId || '',
-                                type: t.type || 'expense',
+                                categoryId: resolvedCatId,
+                                subcategoryId: resolvedSubId,
+                                type: rawType,
                                 paymentMethod: payMethod,
                                 cardId: t.cardId || (payMethod === 'card' ? (appState.creditCards[0]?.id || null) : null),
                                 paid: !!t.paid,
@@ -8323,7 +8489,8 @@ function doGet(e) {
                                 fixedSeriesId: t.fixedSeriesId || null,
                                 isRefund: !!t.isRefund,
                                 currentInstallment: Number(t.currentInstallment) || 1,
-                                totalInstallments: Number(t.totalInstallments) || 1
+                                totalInstallments: Number(t.totalInstallments) || 1,
+                                transferDirection: t.transferDirection || null
                             };
                         });
                     }
@@ -15214,7 +15381,9 @@ function doGet(e) {
 
             showToast("A carregar cabeçalhos da folha de cálculo...");
             try {
-                const response = await fetch(appState.appsScriptUrl);
+                const pid = encodeURIComponent(appState.activeProfileId || 'default');
+                const mapUrl = appState.appsScriptUrl + (appState.appsScriptUrl.includes('?') ? '&' : '?') + 'profileId=' + pid;
+                const response = await fetch(mapUrl);
                 columnMapperRawPayload = await response.json();
 
                 if (columnMapperRawPayload.status !== 'success') {
