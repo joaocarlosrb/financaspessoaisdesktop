@@ -3572,6 +3572,31 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
     }
 }
 </style>
+<style id="skin-v55-cat-picker">
+/* ===== Visual v55: Seletor de 40 Cores e 100 Ícones em Gerir Categorias ===== */
+#modalCategoryManager > .glass-card {
+    max-width: 680px !important;
+}
+#modalCategoryManager #catColorsPaletteGrid button {
+    min-height: 24px !important;
+    height: 24px !important;
+    width: 24px !important;
+    padding: 0 !important;
+    border-radius: 9999px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18) !important;
+}
+#modalCategoryManager #catIconsPaletteGrid button {
+    min-height: 30px !important;
+    height: 30px !important;
+    width: 30px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+</style>
 </head>
 <body class="min-h-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased flex flex-col md:flex-row selection:bg-emerald-500 selection:text-white transition-colors duration-200">
     <!-- TELA INICIAL DE CARREGAMENTO & MODAL DE LOGIN / MULTI-PERFIS -->
@@ -6539,12 +6564,31 @@ function doGet(e) {
                             <input type="number" step="0.01" id="newCatLimit" placeholder="0,00" class="w-full px-2 py-1.5 glass-input rounded-xl text-xs text-slate-800 dark:text-slate-100 outline-none">
                         </div>
                     </div>
-                    <div class="flex items-center justify-between pt-1">
-                        <div class="flex items-center space-x-2">
-                            <label class="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Cor:</label>
-                            <input type="color" id="newCatColor" value="#10b981" class="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent">
+                    <input type="hidden" id="newCatColor" value="#10b981">
+                    <input type="hidden" id="newCatIcon" value="fa-tag">
+
+                    <!-- Seletor de 40 Cores Pré-definidas -->
+                    <div class="space-y-1.5 pt-1">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">Cor da Categoria (40 opções)</label>
+                            <span id="catSelectedColorHexLabel" class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">#10b981</span>
                         </div>
-                        <button type="submit" id="btnSaveCat" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-sm flex items-center">
+                        <div id="catColorsPaletteGrid" class="grid grid-cols-10 gap-1.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700"></div>
+                    </div>
+
+                    <!-- Seletor de 100 Ícones de Orçamento Pessoal -->
+                    <div class="space-y-1.5 pt-1">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Ícone da Categoria (100 opções)</label>
+                            <span id="catSelectedIconPreview" class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs shadow-sm" style="background:#10b981">
+                                <i class="fa-solid fa-tag"></i>
+                            </span>
+                        </div>
+                        <div id="catIconsPaletteGrid" class="grid grid-cols-10 gap-1.5 max-h-36 overflow-y-auto custom-scrollbar p-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700"></div>
+                    </div>
+
+                    <div class="flex items-center justify-end pt-1">
+                        <button type="submit" id="btnSaveCat" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm flex items-center">
                             <i class="fa-solid fa-plus mr-1.5" id="btnSaveCatIcon"></i> <span id="btnSaveCatText">Adicionar Categoria</span>
                         </button>
                     </div>
@@ -6717,6 +6761,27 @@ function doGet(e) {
             { id: 'card_nubank', name: 'Nubank Roxinho', limit: 6000, color: '#820ad1', dueDay: 15, closingDay: 8, dynamicDueDate: true },
             { id: 'card_itau', name: 'Itaú Personalité', limit: 12000, color: '#ea580c', dueDay: 10, closingDay: 3, dynamicDueDate: true },
             { id: 'card_inter', name: 'Inter Black', limit: 8000, color: '#f97316', dueDay: 20, closingDay: 13, dynamicDueDate: true }
+        ];
+
+        const CATEGORY_COLORS_40 = [
+            '#ef4444', '#dc2626', '#f97316', '#ea580c', '#f59e0b', '#d97706', '#eab308', '#ca8a04',
+            '#84cc16', '#65a30d', '#22c55e', '#16a34a', '#10b981', '#059669', '#14b8a6', '#0d9488',
+            '#06b6d4', '#0891b2', '#0ea5e9', '#0284c7', '#3b82f6', '#2563eb', '#6366f1', '#4f46e5',
+            '#8b5cf6', '#7c3aed', '#a855f7', '#9333ea', '#d946ef', '#c026d3', '#ec4899', '#db2777',
+            '#f43f5e', '#e11d48', '#78716c', '#57534e', '#64748b', '#475569', '#0f766e', '#1e293b'
+        ];
+
+        const CATEGORY_ICONS_100 = [
+            'fa-house', 'fa-building', 'fa-key', 'fa-couch', 'fa-bed', 'fa-bath', 'fa-kitchen-set', 'fa-faucet-drip', 'fa-bolt', 'fa-fire-flame-simple',
+            'fa-wifi', 'fa-tv', 'fa-mobile-screen', 'fa-laptop', 'fa-computer', 'fa-print', 'fa-plug', 'fa-lightbulb', 'fa-screwdriver-wrench', 'fa-hammer',
+            'fa-paint-roller', 'fa-broom', 'fa-soap', 'fa-shirt', 'fa-socks', 'fa-glasses', 'fa-bag-shopping', 'fa-cart-shopping', 'fa-basket-shopping', 'fa-store',
+            'fa-utensils', 'fa-burger', 'fa-pizza-slice', 'fa-mug-hot', 'fa-beer-mug-empty', 'fa-wine-glass', 'fa-cake-candles', 'fa-ice-cream', 'fa-apple-whole', 'fa-carrot',
+            'fa-car', 'fa-car-side', 'fa-gas-pump', 'fa-oil-can', 'fa-motorcycle', 'fa-bicycle', 'fa-bus', 'fa-train-subway', 'fa-taxi', 'fa-plane',
+            'fa-road', 'fa-parking', 'fa-wrench', 'fa-heart-pulse', 'fa-stethoscope', 'fa-pills', 'fa-syringe', 'fa-hospital', 'fa-tooth', 'fa-eye',
+            'fa-brain', 'fa-dumbbell', 'fa-person-running', 'fa-spa', 'fa-scissors', 'fa-graduation-cap', 'fa-book', 'fa-book-open', 'fa-pencil', 'fa-school',
+            'fa-baby', 'fa-baby-carriage', 'fa-child', 'fa-dog', 'fa-cat', 'fa-paw', 'fa-gamepad', 'fa-film', 'fa-music', 'fa-headphones',
+            'fa-camera', 'fa-ticket', 'fa-umbrella-beach', 'fa-campground', 'fa-gift', 'fa-hand-holding-dollar', 'fa-sack-dollar', 'fa-money-bill-wave', 'fa-coins', 'fa-wallet',
+            'fa-credit-card', 'fa-piggy-bank', 'fa-chart-line', 'fa-vault', 'fa-landmark', 'fa-file-invoice-dollar', 'fa-receipt', 'fa-percent', 'fa-scale-balanced', 'fa-tag'
         ];
 
         const DEFAULT_CATEGORIES = [
@@ -7613,14 +7678,27 @@ function doGet(e) {
             saveToLocalStorage();
             const payload = {
                 app: 'Planilha de Orçamento Pessoal',
-                version: '54-30',
+                version: '54-55',
                 exportedAt: new Date().toISOString(),
                 state: {
                     selectedYear: appState.selectedYear,
                     selectedMonth: appState.selectedMonth,
                     calendarMonth: appState.calendarMonth,
                     calendarYear: appState.calendarYear,
-                    categories: appState.categories,
+                    categories: appState.categories.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        icon: c.icon || 'fa-tag',
+                        color: c.color || '#10b981',
+                        budget: Number(c.budget) || 0,
+                        type: c.type || 'expense',
+                        hidden: !!c.hidden,
+                        subcategories: (c.subcategories || []).map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            hidden: !!s.hidden
+                        }))
+                    })),
                     creditCards: appState.creditCards,
                     transactions: appState.transactions,
                     walletBalance: appState.walletBalance || 0,
@@ -7691,6 +7769,10 @@ function doGet(e) {
                     if (Array.isArray(st.categories) && st.categories.length > 0) {
                         appState.categories = st.categories.map(c => ({
                             ...c,
+                            icon: c.icon || 'fa-tag',
+                            color: c.color || '#10b981',
+                            budget: Number(c.budget) || 0,
+                            type: c.type || 'expense',
                             hidden: !!c.hidden,
                             subcategories: (c.subcategories || []).map(s => ({
                                 ...s,
@@ -8536,6 +8618,48 @@ function doGet(e) {
             document.getElementById('modalCategoryManager').classList.remove('hidden');
         }
 
+        function renderCategoryColorAndIconPickers() {
+            const selectedColor = document.getElementById('newCatColor')?.value || '#10b981';
+            const selectedIcon = document.getElementById('newCatIcon')?.value || 'fa-tag';
+
+            const hexLabel = document.getElementById('catSelectedColorHexLabel');
+            if (hexLabel) hexLabel.textContent = selectedColor.toLowerCase();
+
+            const preview = document.getElementById('catSelectedIconPreview');
+            if (preview) {
+                preview.style.backgroundColor = selectedColor;
+                preview.innerHTML = `<i class="fa-solid ${selectedIcon}"></i>`;
+            }
+
+            const colorsGrid = document.getElementById('catColorsPaletteGrid');
+            if (colorsGrid) {
+                colorsGrid.innerHTML = CATEGORY_COLORS_40.map(hex => `
+                    <button type="button" onclick="selectCategoryColor('${hex}')" aria-label="Cor ${hex}" class="w-6 h-6 rounded-full mx-auto transition-transform cursor-pointer ${selectedColor.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-offset-2 ring-slate-900 dark:ring-white scale-110' : 'hover:scale-105'}" style="background:${hex}"></button>
+                `).join('');
+            }
+
+            const iconsGrid = document.getElementById('catIconsPaletteGrid');
+            if (iconsGrid) {
+                iconsGrid.innerHTML = CATEGORY_ICONS_100.map(ic => `
+                    <button type="button" onclick="selectCategoryIcon('${ic}')" aria-label="Ícone ${ic}" class="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all cursor-pointer ${selectedIcon === ic ? 'text-white shadow-sm scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700'}" style="${selectedIcon === ic ? `background:${selectedColor}` : ''}">
+                        <i class="fa-solid ${ic}"></i>
+                    </button>
+                `).join('');
+            }
+        }
+
+        function selectCategoryColor(hex) {
+            const colorInp = document.getElementById('newCatColor');
+            if (colorInp) colorInp.value = hex;
+            renderCategoryColorAndIconPickers();
+        }
+
+        function selectCategoryIcon(ic) {
+            const iconInp = document.getElementById('newCatIcon');
+            if (iconInp) iconInp.value = ic;
+            renderCategoryColorAndIconPickers();
+        }
+
         function renderCategoryManagerList() {
             const container = document.getElementById('categoryListContainer');
             if (!container) return;
@@ -8547,11 +8671,14 @@ function doGet(e) {
 
             container.innerHTML = appState.categories.map(cat => {
                 const isHidden = !!cat.hidden;
+                const catIcon = cat.icon || 'fa-tag';
                 return `
                     <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 space-y-2">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-2.5 min-w-0 pr-1">
-                                <span class="w-3 h-3 rounded-full shrink-0 shadow-sm" style="background-color: ${cat.color}"></span>
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs shrink-0 shadow-sm" style="background-color: ${cat.color || '#10b981'}">
+                                    <i class="fa-solid ${catIcon}"></i>
+                                </span>
                                 <div>
                                     <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate ${isHidden ? 'line-through text-slate-400' : ''}">${cat.name}</h4>
                                     <span class="text-[10px] text-slate-400">${translateCategoryType(cat.type)} • Meta: ${formatBRL(cat.budget)}</span>
@@ -8604,6 +8731,8 @@ function doGet(e) {
             document.getElementById('newCatType').value = cat.type || 'expense';
             document.getElementById('newCatLimit').value = cat.budget || '';
             document.getElementById('newCatColor').value = cat.color || '#10b981';
+            document.getElementById('newCatIcon').value = cat.icon || 'fa-tag';
+            renderCategoryColorAndIconPickers();
 
             document.getElementById('catFormTitle').textContent = `Editar Categoria: ${cat.name}`;
             document.getElementById('btnSaveCatText').textContent = 'Salvar Alterações';
@@ -8619,6 +8748,9 @@ function doGet(e) {
             document.getElementById('newCatType').value = 'expense';
             document.getElementById('newCatLimit').value = '';
             document.getElementById('newCatColor').value = '#10b981';
+            const iconInp = document.getElementById('newCatIcon');
+            if (iconInp) iconInp.value = 'fa-tag';
+            renderCategoryColorAndIconPickers();
 
             document.getElementById('catFormTitle').textContent = 'Nova Categoria';
             document.getElementById('btnSaveCatText').textContent = 'Adicionar Categoria';
@@ -8633,6 +8765,7 @@ function doGet(e) {
             const type = document.getElementById('newCatType').value;
             const budget = parseFloat(document.getElementById('newCatLimit').value) || 0;
             const color = document.getElementById('newCatColor').value || '#10b981';
+            const icon = document.getElementById('newCatIcon')?.value || 'fa-tag';
 
             if (!name) return;
 
@@ -8643,13 +8776,14 @@ function doGet(e) {
                     cat.type = type;
                     cat.budget = budget;
                     cat.color = color;
+                    cat.icon = icon;
                     showToast(`Categoria "${name}" atualizada!`);
                 }
             } else {
                 appState.categories.push({
                     id: 'cat_' + Date.now(),
                     name,
-                    icon: type === 'income' ? 'fa-hand-holding-dollar' : (type === 'investment' ? 'fa-piggy-bank' : 'fa-folder'),
+                    icon,
                     color,
                     budget,
                     type,
@@ -15222,8 +15356,19 @@ function doGet(e) {
 
             appState.transactions = parsedTxs;
 
-            if (columnMapperRawPayload.categories) {
-                appState.categories = columnMapperRawPayload.categories;
+            if (Array.isArray(columnMapperRawPayload.categories) && columnMapperRawPayload.categories.length > 0) {
+                appState.categories = columnMapperRawPayload.categories.map(c => ({
+                    ...c,
+                    icon: c.icon || 'fa-tag',
+                    color: c.color || '#10b981',
+                    budget: Number(c.budget) || 0,
+                    type: c.type || 'expense',
+                    hidden: !!c.hidden,
+                    subcategories: (c.subcategories || []).map(s => ({
+                        ...s,
+                        hidden: !!s.hidden
+                    }))
+                }));
             }
             if (columnMapperRawPayload.creditCards) {
                 appState.creditCards = columnMapperRawPayload.creditCards;
