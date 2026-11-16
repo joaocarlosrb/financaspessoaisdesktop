@@ -3234,6 +3234,9 @@ body.col-resizing-active * {
 html.dark #authGateOverlay {
     background-color: var(--theme-bg-dark, #081314);
 }
+html.dark #modalPostLoginSync {
+    background-color: var(--theme-bg-dark, #081314) !important;
+}
 #authGateOverlay.auth-gate-hidden {
     opacity: 0;
     visibility: hidden;
@@ -3790,6 +3793,57 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
                     <button type="submit" class="px-5 py-2.5 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer">Salvar Nova Senha & Entrar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE SINCRONIZAÇÃO PÓS-LOGIN (ENTRE O LOGIN E A ABERTURA DO APLICATIVO) -->
+    <div id="modalPostLoginSync" role="dialog" aria-modal="true" aria-labelledby="postLoginSyncTitle" class="fixed inset-0 z-[10000] flex items-center justify-center p-4 hidden" style="background-color: var(--theme-bg-light, #eef5f3); background-image: radial-gradient(1100px 620px at 10% 0%, color-mix(in srgb, var(--theme-secondary, #10b981) 24%, transparent), transparent 62%), radial-gradient(1000px 600px at 95% 100%, color-mix(in srgb, var(--theme-primary, #0f766e) 22%, transparent), transparent 60%);">
+        <div class="glass-card rounded-3xl max-w-md w-full shadow-2xl border border-white/80 dark:border-white/10 overflow-hidden">
+            <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between" style="background: var(--theme-banner);">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-2xl bg-white/20 text-white flex items-center justify-center text-lg shrink-0">
+                        <i id="postLoginSyncHeaderIcon" class="fa-brands fa-google-drive"></i>
+                    </div>
+                    <div>
+                        <h3 id="postLoginSyncTitle" class="text-base font-extrabold text-white tracking-tight">Sincronizando Dados</h3>
+                        <p id="postLoginSyncProfileLabel" class="text-xs text-white/85">Conectando ao Google Drive...</p>
+                    </div>
+                </div>
+                <span id="postLoginSyncPercentBadge" class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-white/20 text-white">
+                    0%
+                </span>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 flex items-center gap-3.5 shadow-sm">
+                    <div id="postLoginSyncIconBox" class="w-11 h-11 rounded-xl flex items-center justify-center text-lg text-white shrink-0" style="background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));">
+                        <i id="postLoginSyncStatusIcon" class="fa-solid fa-cloud-arrow-down fa-bounce"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p id="postLoginSyncStepTitle" class="text-xs font-extrabold text-slate-900 dark:text-white">Iniciando sincronização...</p>
+                        <p id="postLoginSyncStepDesc" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">Buscando a versão mais atualizada das transações no Google Drive</p>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                        <span id="postLoginSyncStageLabel">Status da Sincronização</span>
+                        <span id="postLoginSyncPercentText">0%</span>
+                    </div>
+                    <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                        <div id="postLoginSyncProgressBar" class="h-full rounded-full transition-all duration-300 ease-out" style="width: 0%; background: linear-gradient(90deg, var(--theme-primary), var(--theme-secondary));"></div>
+                    </div>
+                </div>
+
+                <div id="postLoginSyncErrorActions" class="hidden pt-2 flex flex-col sm:flex-row gap-2">
+                    <button type="button" id="btnRetryPostLoginSync" class="flex-1 py-2.5 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer" style="background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));">
+                        <i class="fa-solid fa-rotate-right"></i> Tentar Novamente
+                    </button>
+                    <button type="button" id="btnContinueOfflinePostLogin" class="flex-1 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-folder-open"></i> Continuar com Dados Locais
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -4714,54 +4768,36 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
                     </div>
                 </div>
 
-                <div class="glass-card rounded-2xl overflow-hidden shadow-sm">
-                    <div class="overflow-x-auto max-h-[620px] custom-scrollbar relative">
-                        <table id="transactionsHistoryTable" class="w-full text-left text-xs border-collapse table-fixed min-w-[1080px]">
-                            <colgroup>
-                                <col style="width: 19%;">
-                                <col style="width: 14%;">
-                                <col style="width: 11%;">
-                                <col style="width: 11%;">
-                                <col style="width: 10%;">
-                                <col style="width: 9%;">
-                                <col style="width: 9%;">
-                                <col style="width: 11%;">
-                                <col style="width: 6%;">
-                            </colgroup>
-                            <thead id="transactionsTableHead" class="sticky top-0 z-10 shadow-sm">
-                                <tr class="font-bold">
-                                    <th onclick="toggleSort('description')" class="sortable-th p-3 truncate" title="Ordenar por Descrição / Nome">
-                                        Descrição <span id="sortIcon-description" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('category')" class="sortable-th p-3 truncate" title="Ordenar por Categoria / Subcategoria">
-                                        Categoria / Subcategoria <span id="sortIcon-category" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('paymentMethod')" class="sortable-th p-3 truncate" title="Ordenar por Forma de Pagamento">
-                                        Forma de Pagamento <span id="sortIcon-paymentMethod" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('type')" class="sortable-th p-3 text-center truncate" title="Ordenar por Tipo">
-                                        Tipo <span id="sortIcon-type" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('amount')" class="sortable-th p-3 text-right truncate" title="Ordenar por Valor Total">
-                                        Valor Total <span id="sortIcon-amount" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('operationDate')" class="sortable-th p-3 text-center truncate" title="Ordenar por Data da Operação">
-                                        Data Operação <span id="sortIcon-operationDate" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('dueDate')" class="sortable-th p-3 text-center truncate" title="Ordenar por Vencimento">
-                                        Vencimento <span id="sortIcon-dueDate" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th onclick="toggleSort('status')" class="sortable-th p-3 text-center truncate" title="Ordenar por Status">
-                                        Status <span id="sortIcon-status" class="ml-1 text-[10px]">↕</span>
-                                    </th>
-                                    <th class="p-3 text-center truncate">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="transactionTableBody" class="divide-y divide-slate-200/60 dark:divide-slate-800 text-slate-700 dark:text-slate-200"></tbody>
-                            <tfoot id="transactionTableFoot" class="sticky bottom-0 z-10 bg-slate-200/90 dark:bg-slate-800/95 backdrop-blur-md font-bold text-slate-800 dark:text-slate-100 border-t-2 border-slate-300 dark:border-slate-700"></tfoot>
-                        </table>
+                <!-- BARRA DE ORDENAÇÃO DOS CARDS -->
+                <div class="glass-card rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                        <span class="text-slate-500 dark:text-slate-400 mr-1"><i class="fa-solid fa-arrow-down-wide-short mr-1"></i> Ordenar em aberto por:</span>
+                        <button type="button" onclick="toggleSort('dueDate')" class="px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
+                            Vencimento <span id="sortIcon-dueDate" class="ml-1 text-[10px]">↕</span>
+                        </button>
+                        <button type="button" onclick="toggleSort('operationDate')" class="px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
+                            Operação <span id="sortIcon-operationDate" class="ml-1 text-[10px]">↕</span>
+                        </button>
+                        <button type="button" onclick="toggleSort('description')" class="px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
+                            Descrição <span id="sortIcon-description" class="ml-1 text-[10px]">↕</span>
+                        </button>
+                        <button type="button" onclick="toggleSort('category')" class="px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
+                            Categoria <span id="sortIcon-category" class="ml-1 text-[10px]">↕</span>
+                        </button>
+                        <button type="button" onclick="toggleSort('amount')" class="px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer">
+                            Valor <span id="sortIcon-amount" class="ml-1 text-[10px]">↕</span>
+                        </button>
                     </div>
+                    <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        <i class="fa-solid fa-layer-group mr-1" style="color: var(--theme-primary);"></i> Em aberto em destaque • Pagos no final por vencimento
+                    </span>
                 </div>
+
+                <!-- GRADE DE CARDS DAS TRANSAÇÕES -->
+                <div id="transactionCardsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+
+                <!-- TOTALIZADOR CONSOLIDADO DO HISTÓRICO -->
+                <div id="transactionTableFoot" class="glass-card rounded-2xl p-4"></div>
             </div>
 
             <!-- Tab 6: Dados Mensais (Matriz) -->
@@ -8428,6 +8464,100 @@ function doGet(e) {
             } finally {
                 if (!isAuto && settingsIcon) {
                     settingsIcon.className = 'fa-solid fa-cloud-arrow-up mr-1.5';
+                }
+            }
+        }
+
+        let silentBackupQueueRunning = false;
+        let silentBackupQueuedAgain = false;
+
+        async function triggerSilentInstantDriveBackup() {
+            saveToLocalStorage();
+            if (!appState.appsScriptUrl) return;
+
+            if (silentBackupQueueRunning) {
+                silentBackupQueuedAgain = true;
+                return;
+            }
+
+            silentBackupQueueRunning = true;
+            try {
+                const exportData = {
+                    profileId: appState.activeProfileId || 'default',
+                    profiles: getProfilesList(),
+                    year: appState.selectedYear,
+                    timestamp: new Date().toISOString(),
+                    walletBalance: appState.walletBalance || 0,
+                    categories: appState.categories.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        icon: c.icon,
+                        color: c.color,
+                        budget: c.budget,
+                        type: c.type,
+                        hidden: !!c.hidden,
+                        subcategories: (c.subcategories || []).map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            hidden: !!s.hidden
+                        }))
+                    })),
+                    creditCards: appState.creditCards.map(card => ({
+                        id: card.id,
+                        name: card.name,
+                        limit: card.limit,
+                        color: card.color,
+                        dueDay: card.dueDay || 10,
+                        closingDay: card.closingDay || 1,
+                        dynamicDueDate: !!card.dynamicDueDate
+                    })),
+                    bankAccountConfig: appState.bankAccountConfig,
+                    transactions: appState.transactions.map(t => {
+                        const cleanDueDate = normalizeDateString(t.dueDate);
+                        const cleanOpDate = normalizeDateString(t.operationDate) || cleanDueDate;
+                        return {
+                            id: t.id,
+                            year: t.year || 2026,
+                            month: t.month,
+                            operationDate: cleanOpDate,
+                            dueDate: cleanDueDate,
+                            description: t.description || '',
+                            notes: t.notes || '',
+                            type: t.type || '',
+                            paymentMethod: t.paymentMethod || 'bank',
+                            categoryId: t.categoryId || '',
+                            subcategoryId: t.subcategoryId || '',
+                            cardId: t.cardId || '',
+                            originalAmount: t.originalAmount || t.amount || 0,
+                            interestPenalty: t.interestPenalty || 0,
+                            taxes: t.taxes || 0,
+                            amount: t.amount || 0,
+                            paid: !!t.paid,
+                            isFixed: !!t.isFixed,
+                            fixedSeriesId: t.fixedSeriesId || '',
+                            isRefund: !!t.isRefund,
+                            currentInstallment: t.currentInstallment || 1,
+                            totalInstallments: t.totalInstallments || 1,
+                            transferDirection: t.transferDirection || ''
+                        };
+                    })
+                };
+
+                await fetch(appState.appsScriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportData)
+                });
+
+                updateSyncTimestamp();
+            } catch (err) {
+                console.warn("Falha silenciosa no backup instantâneo para o Google Drive:", err);
+            } finally {
+                silentBackupQueueRunning = false;
+                if (silentBackupQueuedAgain) {
+                    silentBackupQueuedAgain = false;
+                    triggerSilentInstantDriveBackup();
                 }
             }
         }
@@ -12837,6 +12967,7 @@ function doGet(e) {
             saveToLocalStorage();
             refreshUI();
             showToast(tx.paid ? "Lançamento Quitado!" : "Lançamento reaberto (Em Aberto).");
+            triggerSilentInstantDriveBackup();
         }
 
         let parentOverlayModalName = null;
@@ -13031,11 +13162,11 @@ function doGet(e) {
         }
 
         function renderTransactions() {
-            const tbody = document.getElementById('transactionTableBody');
+            const cardsGrid = document.getElementById('transactionCardsGrid');
             const countSpan = document.getElementById('filteredCount');
             const typeFilterBadge = document.getElementById('typeFilterBadge');
             const filterSpecificCard = document.getElementById('filterSpecificCard');
-            if (!tbody) return;
+            if (!cardsGrid) return;
 
             updateSortHeaderIcons();
 
@@ -13162,7 +13293,11 @@ function doGet(e) {
                 return matchYear && matchSearch && matchMonth && matchCat && matchSub && matchType && matchPayment && matchCard && matchStatus && matchRecurrence;
             });
 
-            filtered.sort((a, b) => {
+            // Separa transações em aberto (destaque no topo) e transações já pagas/estornadas (no final em ordem de vencimento)
+            const openTransactions = filtered.filter(t => !t.paid && !t.isRefund);
+            const paidTransactions = filtered.filter(t => !!t.paid || !!t.isRefund);
+
+            openTransactions.sort((a, b) => {
                 let valA = '';
                 let valB = '';
 
@@ -13212,67 +13347,87 @@ function doGet(e) {
                             : opDateB.localeCompare(opDateA);
 
                     case 'dueDate':
+                    default:
                         const dateA = normalizeDateString(a.dueDate) || `${a.year || 2026}-${String(a.month + 1).padStart(2, '0')}-10`;
                         const dateB = normalizeDateString(b.dueDate) || `${b.year || 2026}-${String(b.month + 1).padStart(2, '0')}-10`;
                         return appState.sortDirection === 'asc' 
                             ? dateA.localeCompare(dateB) 
                             : dateB.localeCompare(dateA);
-
-                    case 'status':
-                        const statusA = a.paid ? 1 : 0;
-                        const statusB = b.paid ? 1 : 0;
-                        return appState.sortDirection === 'asc' ? statusA - statusB : statusB - statusA;
-
-                    default:
-                        return 0;
                 }
             });
 
-            if (countSpan) countSpan.textContent = filtered.length;
+            // Transações já pagas sempre no final, ordenadas por data de vencimento
+            paidTransactions.sort((a, b) => {
+                const dateA = normalizeDateString(a.dueDate) || `${a.year || 2026}-${String(a.month + 1).padStart(2, '0')}-10`;
+                const dateB = normalizeDateString(b.dueDate) || `${b.year || 2026}-${String(b.month + 1).padStart(2, '0')}-10`;
+                return dateA.localeCompare(dateB);
+            });
 
-            if (filtered.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="p-8 text-center text-slate-400">
-                            <i class="fa-solid fa-folder-open text-2xl mb-2"></i>
-                            <p class="text-xs">Nenhum lançamento encontrado para os filtros selecionados.</p>
-                        </td>
-                    </tr>
+            const orderedList = [...openTransactions, ...paidTransactions];
+
+            if (countSpan) countSpan.textContent = orderedList.length;
+
+            if (orderedList.length === 0) {
+                cardsGrid.innerHTML = `
+                    <div class="col-span-full glass-card rounded-2xl p-10 text-center text-slate-400">
+                        <i class="fa-solid fa-folder-open text-3xl mb-2.5"></i>
+                        <p class="text-xs font-semibold">Nenhum lançamento encontrado para os filtros selecionados.</p>
+                    </div>
                 `;
                 const tfoot = document.getElementById('transactionTableFoot');
                 if (tfoot) tfoot.innerHTML = '';
                 return;
             }
 
-            tbody.innerHTML = filtered.map(t => {
+            cardsGrid.innerHTML = orderedList.map((t, index) => {
                 const cat = appState.categories.find(c => c.id === t.categoryId);
                 const sub = cat && cat.subcategories ? cat.subcategories.find(s => s.id === t.subcategoryId) : null;
                 const isWithdrawal = isInvestmentWithdrawal(t);
                 const isRefund = !!t.isRefund;
+                const isPaid = !!t.paid || isRefund;
+
+                const showPaidDivider = (index === openTransactions.length && paidTransactions.length > 0);
+                const dividerHtml = showPaidDivider ? `
+                    <div class="col-span-full flex items-center gap-3 pt-2 pb-1">
+                        <div class="h-px flex-1 bg-slate-300/70 dark:bg-slate-700/70"></div>
+                        <span class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-200/70 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check text-emerald-600/70 dark:text-emerald-400/70"></i>
+                            Transações Pagas / Quitadas (${paidTransactions.length}) — Ordem de Vencimento
+                        </span>
+                        <div class="h-px flex-1 bg-slate-300/70 dark:bg-slate-700/70"></div>
+                    </div>
+                ` : '';
 
                 let badgeClass = 'bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700';
                 let typeLabel = 'Despesa';
                 let typeIcon = 'fa-arrow-up-right text-rose-600 dark:text-rose-400';
+                let iconBoxBg = 'bg-rose-500/12 text-rose-600 dark:text-rose-400';
+
                 if (isRefund) {
                     badgeClass = 'bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700';
                     typeLabel = 'Estorno';
                     typeIcon = 'fa-rotate-left text-purple-600 dark:text-purple-400';
+                    iconBoxBg = 'bg-purple-500/12 text-purple-600 dark:text-purple-400';
                 } else if (t.type === 'income') {
                     badgeClass = 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700';
                     typeLabel = 'Receita';
                     typeIcon = 'fa-arrow-down-left text-emerald-600 dark:text-emerald-400';
+                    iconBoxBg = 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400';
                 } else if (isWithdrawal) {
                     badgeClass = 'bg-teal-100 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700';
                     typeLabel = 'Resgate';
                     typeIcon = 'fa-arrow-down-left text-teal-600 dark:text-teal-400';
+                    iconBoxBg = 'bg-teal-500/12 text-teal-600 dark:text-teal-400';
                 } else if (t.type === 'investment') {
                     badgeClass = 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700';
                     typeLabel = 'Invest.';
                     typeIcon = 'fa-chart-line text-indigo-600 dark:text-indigo-400';
+                    iconBoxBg = 'bg-indigo-500/12 text-indigo-600 dark:text-indigo-400';
                 } else if (t.type === 'transfer') {
                     badgeClass = 'bg-sky-100 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700';
                     typeLabel = 'Transf.';
                     typeIcon = 'fa-arrow-right-arrow-left text-sky-600 dark:text-sky-400';
+                    iconBoxBg = 'bg-sky-500/12 text-sky-600 dark:text-sky-400';
                 }
 
                 const isCard = (t.paymentMethod || 'bank') === 'card';
@@ -13280,15 +13435,15 @@ function doGet(e) {
                 let paymentBadge = '';
 
                 if (t.type === 'transfer') {
-                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-sky-100 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800 truncate max-w-full"><i class="fa-solid fa-arrow-right-arrow-left mr-1 text-[9px] shrink-0"></i> <span class="truncate">${isWithdrawal ? 'Resgate' : 'Aporte'}</span></span>`;
+                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-sky-100/80 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800 truncate max-w-full"><i class="fa-solid fa-arrow-right-arrow-left mr-1 text-[9px] shrink-0"></i> <span class="truncate">${isWithdrawal ? 'Resgate' : 'Aporte'}</span></span>`;
                 } else if (isCard) {
                     const cardObj = appState.creditCards.find(c => c.id === t.cardId) || appState.creditCards[0];
                     const cardName = cardObj ? cardObj.name : 'Cartão de Crédito';
-                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 truncate max-w-full"><i class="fa-solid fa-credit-card mr-1 text-[9px] shrink-0"></i> <span class="truncate">${cardName}</span></span>`;
+                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-purple-100/80 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 truncate max-w-full"><i class="fa-solid fa-credit-card mr-1 text-[9px] shrink-0"></i> <span class="truncate">${cardName}</span></span>`;
                 } else if (isWallet) {
-                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 truncate max-w-full"><i class="fa-solid fa-wallet mr-1 text-[9px] shrink-0"></i> Carteira</span>`;
+                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-100/80 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 truncate max-w-full"><i class="fa-solid fa-wallet mr-1 text-[9px] shrink-0"></i> Carteira</span>`;
                 } else {
-                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-teal-100 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 truncate max-w-full"><i class="fa-solid ${appState.bankAccountConfig.icon} mr-1 text-[9px] shrink-0"></i> Conta Corrente</span>`;
+                    paymentBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-teal-100/80 dark:bg-teal-950/70 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800 truncate max-w-full"><i class="fa-solid ${appState.bankAccountConfig.icon} mr-1 text-[9px] shrink-0"></i> Conta Corrente</span>`;
                 }
 
                 const cleanOpDate = normalizeDateString(t.operationDate) || normalizeDateString(t.dueDate);
@@ -13300,25 +13455,35 @@ function doGet(e) {
 
                 const cleanDueDate = normalizeDateString(t.dueDate);
                 let formattedDueDate = '-';
+                let dueUrgencyBadge = '';
                 if (cleanDueDate && cleanDueDate.includes('-')) {
                     const [y, m, d] = cleanDueDate.split('-');
                     formattedDueDate = `${d}/${m}/${y}`;
+                    if (!isPaid) {
+                        const txDate = new Date(Number(y), Number(m) - 1, Number(d));
+                        txDate.setHours(0, 0, 0, 0);
+                        const diffDays = Math.ceil((txDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        if (diffDays < 0) {
+                            dueUrgencyBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-rose-500 text-white">Vencida</span>`;
+                        } else if (diffDays <= 3) {
+                            dueUrgencyBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500 text-white">${diffDays === 0 ? 'Vence hoje' : 'Vence em ' + diffDays + 'd'}</span>`;
+                        }
+                    }
                 } else {
                     const monthStr = String(Number(t.month) + 1).padStart(2, '0');
                     formattedDueDate = `10/${monthStr}/${t.year || appState.selectedYear}`;
                 }
 
-                const isPaid = !!t.paid;
                 const statusBtn = isRefund 
-                    ? `<span class="w-24 inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 whitespace-nowrap">
+                    ? `<span class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/70 dark:border-emerald-700/70 whitespace-nowrap">
                          <i class="fa-solid fa-rotate-left mr-1 text-[9px]"></i> Estorno
                        </span>`
-                    : (isPaid 
-                        ? `<button onclick="event.stopPropagation(); toggleTransactionPaid('${t.id}')" title="Clique para marcar como Em Aberto" class="w-24 inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 hover:bg-emerald-200 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 transition-all shadow-sm whitespace-nowrap">
-                             <i class="fa-solid fa-circle-check mr-1.5 text-emerald-600 dark:text-emerald-400 text-[10px]"></i> Quitado
+                    : (t.paid 
+                        ? `<button onclick="event.stopPropagation(); toggleTransactionPaid('${t.id}')" title="Clique para marcar como Em Aberto" class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100/70 dark:bg-emerald-950/50 hover:bg-emerald-200 text-emerald-700 dark:text-emerald-300 border border-emerald-300/70 dark:border-emerald-700/70 transition-all whitespace-nowrap cursor-pointer">
+                             <i class="fa-solid fa-circle-check mr-1 text-emerald-600/80 dark:text-emerald-400/80 text-[10px]"></i> Quitado
                            </button>`
-                        : `<button onclick="event.stopPropagation(); toggleTransactionPaid('${t.id}')" title="Clique para marcar como Quitado/Pago" class="w-24 inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 hover:bg-amber-200 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 transition-all shadow-sm whitespace-nowrap">
-                             <i class="fa-regular fa-circle-dot mr-1.5 text-amber-600 dark:text-amber-400 text-[10px]"></i> Aberto
+                        : `<button onclick="event.stopPropagation(); toggleTransactionPaid('${t.id}')" title="Clique para marcar como Quitado/Pago" class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 hover:bg-amber-200 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 transition-all shadow-sm whitespace-nowrap cursor-pointer">
+                             <i class="fa-regular fa-circle-dot mr-1 text-amber-600 dark:text-amber-400 text-[10px]"></i> Em Aberto
                            </button>`);
 
                 const interestVal = Number(t.interestPenalty) || 0;
@@ -13330,47 +13495,66 @@ function doGet(e) {
                 const hasInstBadge = totInst > 1;
 
                 let signPrefix = '';
-                let valueColor = 'text-slate-800 dark:text-slate-200';
+                let valueColor = 'text-slate-900 dark:text-white';
                 if (isRefund) {
                     signPrefix = '';
-                    valueColor = 'text-emerald-600 dark:text-emerald-400 font-bold';
+                    valueColor = 'text-emerald-600 dark:text-emerald-400 font-extrabold';
                 } else if (t.type === 'income' || isWithdrawal) {
                     signPrefix = '+ ';
-                    valueColor = 'text-emerald-600 dark:text-emerald-400 font-bold';
+                    valueColor = 'text-emerald-600 dark:text-emerald-400 font-extrabold';
                 } else if (t.type === 'investment') {
                     signPrefix = '+ ';
-                    valueColor = 'text-indigo-600 dark:text-indigo-400';
+                    valueColor = 'text-indigo-600 dark:text-indigo-400 font-extrabold';
                 } else if (t.type === 'transfer') {
                     signPrefix = '';
-                    valueColor = 'text-sky-700 dark:text-sky-400';
+                    valueColor = 'text-sky-700 dark:text-sky-400 font-extrabold';
+                } else {
+                    signPrefix = '- ';
+                    valueColor = 'text-rose-600 dark:text-rose-400 font-extrabold';
                 }
 
+                // Visual contrastado: cards em aberto com cor cheia e destaque; cards já pagos com cor mais fraca/suave
+                const cardStateClasses = isPaid
+                    ? 'opacity-60 hover:opacity-90 bg-slate-100/75 dark:bg-slate-900/45 border-slate-200/60 dark:border-slate-800/60 shadow-none'
+                    : 'opacity-100 ring-1 ring-slate-200/80 dark:ring-slate-700/80 hover:-translate-y-0.5 hover:shadow-lg';
+
                 return `
-                    <tr onclick="openTransactionDetailsModal('${t.id}')" class="glass-table-row transition-colors cursor-pointer ${isPaid ? 'opacity-70 hover:opacity-100' : ''}">
-                        <td class="p-3 font-medium text-slate-900 dark:text-white truncate ${isPaid ? 'line-through text-slate-500' : ''}">
-                            <div class="flex items-center space-x-1.5 truncate" title="${t.description}">
-                                <span class="truncate">${t.description}</span>
-                                ${hasInstBadge ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 shrink-0">${curInst}/${totInst}</span>` : ''}
-                                ${isFixed ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${t.type === 'income' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300'} shrink-0">Fixa</span>` : ''}
-                                ${isRefund ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 shrink-0">Estorno</span>' : ''}
-                                ${t.notes ? '<i class="fa-regular fa-note-sticky text-amber-500 text-[11px] shrink-0" title="Possui observações"></i>' : ''}
+                    ${dividerHtml}
+                    <div onclick="openTransactionDetailsModal('${t.id}')" class="glass-card rounded-2xl p-4 flex flex-col justify-between gap-3 cursor-pointer transition-all ${cardStateClasses}">
+                        <!-- Topo do Card: Ícone da Categoria + Título + Status -->
+                        <div class="flex items-start justify-between gap-2.5">
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <div class="w-9 h-9 rounded-xl ${isPaid ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-400 dark:text-slate-500' : iconBoxBg} flex items-center justify-center text-sm shrink-0 mt-0.5">
+                                    <i class="fa-solid ${cat ? cat.icon : (t.type === 'transfer' ? 'fa-arrow-right-arrow-left' : 'fa-receipt')}"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs sm:text-sm font-extrabold ${isPaid ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'} truncate" title="${t.description}">
+                                        ${t.description}
+                                    </h4>
+                                    <p class="text-[11px] ${isPaid ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400'} truncate mt-0.5">
+                                        ${cat ? cat.name : (t.type === 'transfer' ? 'Transferência' : '-')}${sub ? ' • ' + sub.name : ''}
+                                    </p>
+                                </div>
                             </div>
-                        </td>
-                        <td class="p-3 truncate">
-                            <div class="flex flex-col truncate">
-                                <span class="font-semibold text-slate-800 dark:text-slate-200 truncate" title="${cat ? cat.name : (t.type === 'transfer' ? 'Transferência' : '-')}">${cat ? cat.name : (t.type === 'transfer' ? 'Transferência' : '-')}</span>
-                                <span class="text-[10px] text-slate-400 dark:text-slate-500 truncate" title="${sub ? sub.name : 'Geral'}">${sub ? sub.name : 'Geral'}</span>
+                            <div class="shrink-0">
+                                ${statusBtn}
                             </div>
-                        </td>
-                        <td class="p-3 truncate">${paymentBadge}</td>
-                        <td class="p-3 text-center whitespace-nowrap">
-                            <span class="w-24 inline-flex items-center justify-center px-2 py-1 rounded-full text-[10px] font-bold transition-all shadow-sm whitespace-nowrap ${badgeClass}">
-                                <i class="fa-solid ${typeIcon} mr-1.5 text-[10px]"></i> ${typeLabel}
-                            </span>
-                        </td>
-                        <td class="p-3 text-right whitespace-nowrap">
-                            <div class="inline-flex items-center justify-end space-x-1.5 font-bold ${valueColor}">
-                                <span>${signPrefix}${formatBRL(t.amount)}</span>${hasInterest ? `
+                        </div>
+
+                        <!-- Meio do Card: Valor Total em Destaque + Etiquetas -->
+                        <div class="flex items-center justify-between gap-2 py-2 px-3 rounded-xl ${isPaid ? 'bg-slate-200/50 dark:bg-slate-800/40' : 'bg-slate-100/80 dark:bg-slate-800/70'}">
+                            <div class="flex flex-wrap items-center gap-1">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isPaid ? 'opacity-75' : ''} ${badgeClass}">
+                                    <i class="fa-solid ${typeIcon} mr-1 text-[9px]"></i> ${typeLabel}
+                                </span>
+                                ${hasInstBadge ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300">${curInst}/${totInst}</span>` : ''}
+                                ${isFixed ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${t.type === 'income' ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300'}">Fixa</span>` : ''}
+                                ${dueUrgencyBadge}
+                                ${t.notes ? '<i class="fa-regular fa-note-sticky text-amber-500 text-[11px] ml-0.5" title="Possui observações"></i>' : ''}
+                            </div>
+                            <div class="inline-flex items-center gap-1.5 text-sm sm:text-base font-black ${isPaid ? 'text-slate-500 dark:text-slate-400' : valueColor} whitespace-nowrap">
+                                <span>${signPrefix}${formatBRL(t.amount)}</span>
+                                ${hasInterest ? `
                                     <div class="tooltip-container">
                                         <button type="button" tabindex="-1" class="w-4 h-4 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center text-[10px] hover:bg-rose-200 cursor-help transition-colors border border-rose-300 dark:border-rose-800">
                                             <i class="fa-solid fa-info"></i>
@@ -13386,33 +13570,29 @@ function doGet(e) {
                                     </div>
                                 ` : ''}
                             </div>
-                        </td>
-                        <!-- CÉLULA: DATA DA OPERAÇÃO -->
-                        <td class="p-3 text-center font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                            <span class="inline-flex items-center justify-center">
-                                <i class="fa-regular fa-calendar text-blue-500 dark:text-blue-400 mr-1 text-[10px]"></i>
-                                ${formattedOpDate}
-                            </span>
-                        </td>
-                        <!-- CÉLULA: DATA DE VENCIMENTO -->
-                        <td class="p-3 text-center font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                            <span class="inline-flex items-center justify-center">
-                                <i class="fa-regular fa-calendar-check text-emerald-600 dark:text-emerald-400 mr-1 text-[10px]"></i>
-                                ${formattedDueDate}
-                            </span>
-                        </td>
-                        <td class="p-3 text-center whitespace-nowrap">
-                            ${statusBtn}
-                        </td>
-                        <td class="p-3 text-center whitespace-nowrap space-x-1">
-                            <button onclick="event.stopPropagation(); editTransaction('${t.id}')" title="Editar" class="text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 text-xs p-0.5">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="event.stopPropagation(); promptDeleteTransaction('${t.id}')" title="Excluir" class="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 text-xs p-0.5">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </td>
-                    </tr>
+                        </div>
+
+                        <!-- Rodapé do Card: Forma de Pagamento, Datas e Ações -->
+                        <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800/80 text-[11px]">
+                            <div class="flex items-center gap-2 min-w-0">
+                                ${paymentBadge}
+                                <span class="text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap" title="Data de Vencimento">
+                                    <i class="fa-regular fa-calendar-check ${isPaid ? 'text-slate-400' : 'text-emerald-600 dark:text-emerald-400'} mr-1"></i>${formattedDueDate}
+                                </span>
+                                <span class="hidden sm:inline text-slate-400 dark:text-slate-500 whitespace-nowrap" title="Data da Operação">
+                                    (Op: ${formattedOpDate})
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="event.stopPropagation(); editTransaction('${t.id}')" title="Editar" class="w-7 h-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-slate-800 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center justify-center transition-colors cursor-pointer">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); promptDeleteTransaction('${t.id}')" title="Excluir" class="w-7 h-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-slate-800 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-colors cursor-pointer">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 `;
             }).join('');
 
@@ -13424,23 +13604,23 @@ function doGet(e) {
                 let prefix = '';
 
                 if (typeFilter === 'income') {
-                    totalVal = filtered.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+                    totalVal = orderedList.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
                     colorClass = 'text-emerald-700 dark:text-emerald-400';
                     prefix = '+ ';
-                    detailsText = `${filtered.length} receita(s)/estorno(s)`;
+                    detailsText = `${orderedList.length} receita(s)/estorno(s)`;
                 } else if (typeFilter === 'expense') {
-                    totalVal = filtered.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+                    totalVal = orderedList.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
                     colorClass = 'text-rose-700 dark:text-rose-400';
                     prefix = '- ';
-                    detailsText = `${filtered.length} despesa(s)`;
+                    detailsText = `${orderedList.length} despesa(s)`;
                 } else if (typeFilter === 'investment') {
-                    totalVal = filtered.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+                    totalVal = orderedList.reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
                     colorClass = 'text-indigo-700 dark:text-indigo-400';
                     prefix = '+ ';
-                    detailsText = `${filtered.length} investimento(s)`;
+                    detailsText = `${orderedList.length} investimento(s)`;
                 } else {
                     let inc = 0, exp = 0;
-                    filtered.forEach(t => {
+                    orderedList.forEach(t => {
                         const amt = Number(t.amount) || 0;
                         if (t.type === 'income' || isInvestmentWithdrawal(t)) inc += amt;
                         else if (t.type === 'expense') exp += amt;
@@ -13449,19 +13629,18 @@ function doGet(e) {
                     totalVal = net;
                     colorClass = net >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
                     prefix = net >= 0 ? '+ ' : '- ';
-                    detailsText = `${filtered.length} itens`;
+                    detailsText = `${orderedList.length} itens • ${openTransactions.length} em aberto, ${paidTransactions.length} quitado(s)`;
                 }
 
                 tfoot.innerHTML = `
-                    <tr class="border-t-2 border-slate-300/80 dark:border-slate-700 bg-slate-200/60 dark:bg-slate-800/80 font-bold">
-                        <td colspan="4" class="p-3 text-left text-slate-800 dark:text-slate-200 truncate">
-                            Total dos Lançamentos Exibidos (${detailsText})
-                        </td>
-                        <td class="p-3 text-right font-extrabold text-xs sm:text-sm ${colorClass} whitespace-nowrap">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                            Total dos Lançamentos Exibidos <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">(${detailsText})</span>
+                        </div>
+                        <div class="text-base sm:text-lg font-black ${colorClass} whitespace-nowrap">
                             ${prefix}${formatBRL(Math.abs(totalVal))}
-                        </td>
-                        <td colspan="4"></td>
-                    </tr>
+                        </div>
+                    </div>
                 `;
             }
         }
@@ -13529,6 +13708,7 @@ function doGet(e) {
             saveToLocalStorage();
             refreshUI();
             closeModal('deleteConfirm');
+            triggerSilentInstantDriveBackup();
         }
 
         function goToCurrentCalendarMonth() {
@@ -15054,6 +15234,7 @@ function doGet(e) {
             saveToLocalStorage();
             refreshUI();
             closeModal('transaction');
+            triggerSilentInstantDriveBackup();
         }
 
         // =========================================================================
@@ -15272,6 +15453,299 @@ function doGet(e) {
             if (txt) txt.textContent = isLoading ? 'Autenticando no Google Drive...' : 'Entrar no Sistema';
         }
 
+        function updatePostLoginSyncModal(pct, stepTitle, stepDesc, state = 'loading') {
+            const modal = document.getElementById('modalPostLoginSync');
+            const bar = document.getElementById('postLoginSyncProgressBar');
+            const pctBadge = document.getElementById('postLoginSyncPercentBadge');
+            const pctText = document.getElementById('postLoginSyncPercentText');
+            const titleEl = document.getElementById('postLoginSyncStepTitle');
+            const descEl = document.getElementById('postLoginSyncStepDesc');
+            const iconBox = document.getElementById('postLoginSyncIconBox');
+            const iconEl = document.getElementById('postLoginSyncStatusIcon');
+            const errActions = document.getElementById('postLoginSyncErrorActions');
+
+            if (modal) modal.classList.remove('hidden');
+            const safePct = Math.max(0, Math.min(100, Number(pct) || 0));
+            if (bar) bar.style.width = `${safePct}%`;
+            if (pctBadge) pctBadge.textContent = `${safePct}%`;
+            if (pctText) pctText.textContent = `${safePct}%`;
+            if (titleEl && stepTitle) titleEl.textContent = stepTitle;
+            if (descEl && stepDesc) descEl.textContent = stepDesc;
+
+            if (state === 'success') {
+                if (iconBox) iconBox.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+                if (iconEl) iconEl.className = 'fa-solid fa-circle-check';
+                if (errActions) errActions.classList.add('hidden');
+            } else if (state === 'error') {
+                if (iconBox) iconBox.style.background = 'linear-gradient(135deg, #be123c, #f43f5e)';
+                if (iconEl) iconEl.className = 'fa-solid fa-triangle-exclamation';
+                if (errActions) errActions.classList.remove('hidden');
+            } else {
+                if (iconBox) iconBox.style.background = 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))';
+                if (iconEl) iconEl.className = 'fa-solid fa-cloud-arrow-down fa-bounce';
+                if (errActions) errActions.classList.add('hidden');
+            }
+        }
+
+        function finalizeEnterApplicationAfterSync(prof, options = {}) {
+            const syncModal = document.getElementById('modalPostLoginSync');
+            const overlay = document.getElementById('authGateOverlay');
+
+            if (syncModal) syncModal.classList.add('hidden');
+            if (overlay) overlay.classList.add('auth-gate-hidden');
+
+            showToast(`Bem-vindo(a), ${prof.name}!`);
+
+            if (options.promptUsernameSetup) {
+                setTimeout(() => {
+                    openUserProfileModal(false, true);
+                }, 280);
+            }
+        }
+
+        async function runPostLoginDriveSyncAndEnterApp(prof, options = {}) {
+            const overlay = document.getElementById('authGateOverlay');
+            const syncModal = document.getElementById('modalPostLoginSync');
+            const profLabel = document.getElementById('postLoginSyncProfileLabel');
+
+            if (profLabel) {
+                profLabel.textContent = `Perfil: ${prof.name}${prof.username ? ' (@' + prof.username + ')' : ''}`;
+            }
+
+            // Oculta a tela de login e exibe o modal de sincronização antes de abrir o aplicativo
+            if (overlay) overlay.classList.add('auth-gate-hidden');
+            if (syncModal) syncModal.classList.remove('hidden');
+
+            const retryBtn = document.getElementById('btnRetryPostLoginSync');
+            const continueBtn = document.getElementById('btnContinueOfflinePostLogin');
+            if (retryBtn) {
+                retryBtn.onclick = () => runPostLoginDriveSyncAndEnterApp(prof, options);
+            }
+            if (continueBtn) {
+                continueBtn.onclick = () => {
+                    finalizeEnterApplicationAfterSync(prof, options);
+                };
+            }
+
+            if (!appState.appsScriptUrl) {
+                updatePostLoginSyncModal(
+                    45,
+                    'Carregando dados locais...',
+                    'Nenhum link do Google Apps Script configurado. Preparando dados salvos neste dispositivo...',
+                    'loading'
+                );
+                await new Promise(r => setTimeout(r, 260));
+                updatePostLoginSyncModal(
+                    100,
+                    'Dados locais prontos!',
+                    'Abrindo o aplicativo com suas informações...',
+                    'success'
+                );
+                await new Promise(r => setTimeout(r, 320));
+                finalizeEnterApplicationAfterSync(prof, options);
+                return;
+            }
+
+            try {
+                updatePostLoginSyncModal(
+                    18,
+                    'Conectando ao Google Drive...',
+                    'Estabelecendo comunicação segura com o Google Apps Script...',
+                    'loading'
+                );
+
+                if (options.pushProfilesFirst) {
+                    try {
+                        await fetch(appState.appsScriptUrl, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                profileId: appState.activeProfileId || prof.id || 'default',
+                                profiles: getProfilesList(),
+                                transactions: appState.transactions,
+                                categories: appState.categories,
+                                creditCards: appState.creditCards,
+                                bankAccountConfig: appState.bankAccountConfig,
+                                walletBalance: appState.walletBalance,
+                                timestamp: new Date().toISOString()
+                            })
+                        });
+                    } catch (e) {}
+                }
+
+                updatePostLoginSyncModal(
+                    42,
+                    'Baixando backup atualizado...',
+                    'Transferindo transações, categorias, cartões e saldos mais recentes...',
+                    'loading'
+                );
+
+                const pid = encodeURIComponent(prof.id || appState.activeProfileId || 'default');
+                const restoreUrl = appState.appsScriptUrl + (appState.appsScriptUrl.includes('?') ? '&' : '?') + 'profileId=' + pid;
+                const response = await fetch(restoreUrl);
+                const data = await response.json();
+
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) ? data.message : 'Resposta inválida do Google Drive');
+                }
+
+                updatePostLoginSyncModal(
+                    76,
+                    'Atualizando transações e saldos...',
+                    'Aplicando os dados sincronizados na planilha e nos gráficos...',
+                    'loading'
+                );
+
+                if (Array.isArray(data.profiles) && data.profiles.length > 0) {
+                    mergeRemoteProfiles(data.profiles);
+                }
+                if (data.walletBalance !== undefined) {
+                    appState.walletBalance = Number(data.walletBalance) || 0;
+                }
+
+                if (Array.isArray(data.categories) && data.categories.length > 0) {
+                    appState.categories = data.categories.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        icon: c.icon || 'fa-tag',
+                        color: c.color || '#10b981',
+                        budget: Number(c.budget) || 0,
+                        type: c.type || 'expense',
+                        hidden: !!c.hidden,
+                        subcategories: (c.subcategories || []).map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            hidden: !!s.hidden
+                        }))
+                    }));
+                }
+
+                if (Array.isArray(data.creditCards) && data.creditCards.length > 0) {
+                    appState.creditCards = data.creditCards.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        limit: Number(c.limit) || 0,
+                        color: c.color || '#820ad1',
+                        dueDay: Number(c.dueDay) || 10,
+                        closingDay: Number(c.closingDay) || 1,
+                        dynamicDueDate: !!c.dynamicDueDate
+                    }));
+                }
+
+                if (data.bankAccountConfig && data.bankAccountConfig.name) {
+                    appState.bankAccountConfig = data.bankAccountConfig;
+                }
+
+                if (Array.isArray(data.transactions)) {
+                    appState.transactions = data.transactions.filter(t => !(t.description || '').includes('Reajuste de Saldo - Carteira')).map(t => {
+                        const original = Number(t.originalAmount) || Number(t.amount) || 0;
+                        const interest = Number(t.interestPenalty) || 0;
+                        const taxes = Number(t.taxes) || 0;
+                        const total = Number(t.amount) || (original + interest + taxes);
+                        const cleanDueDate = normalizeDateString(t.dueDate);
+                        const cleanOpDate = normalizeDateString(t.operationDate) || cleanDueDate;
+
+                        let resolvedMonth = Number(t.month);
+                        let resolvedYear = Number(t.year) || 2026;
+                        if (cleanDueDate && cleanDueDate.includes('-')) {
+                            const p = cleanDueDate.split('-');
+                            if (p.length === 3) {
+                                resolvedYear = Number(p[0]);
+                                resolvedMonth = Number(p[1]) - 1;
+                            }
+                        }
+
+                        let payMethod = String(t.paymentMethod || 'bank').toLowerCase();
+                        if (payMethod === 'wallet' || payMethod.includes('carteira')) payMethod = 'wallet';
+                        else if (payMethod.includes('cart') || t.cardId) payMethod = 'card';
+                        else payMethod = 'bank';
+
+                        let resolvedCatId = String(t.categoryId || '').trim();
+                        let matchedCat = appState.categories.find(c => c.id === resolvedCatId);
+                        if (!matchedCat && resolvedCatId) {
+                            matchedCat = appState.categories.find(c => c.name.toLowerCase() === resolvedCatId.toLowerCase());
+                            if (matchedCat) resolvedCatId = matchedCat.id;
+                        }
+                        if (!matchedCat) {
+                            resolvedCatId = (t.type === 'income') ? 'cat_salario' : (t.type === 'investment' || t.type === 'transfer' ? 'cat_investimentos' : 'cat_moradia');
+                            matchedCat = appState.categories.find(c => c.id === resolvedCatId);
+                        }
+
+                        let resolvedSubId = String(t.subcategoryId || '').trim();
+                        if (resolvedSubId && matchedCat && Array.isArray(matchedCat.subcategories)) {
+                            const subById = matchedCat.subcategories.find(s => s.id === resolvedSubId);
+                            if (!subById) {
+                                const subByName = matchedCat.subcategories.find(s => s.name.toLowerCase() === resolvedSubId.toLowerCase());
+                                if (subByName) resolvedSubId = subByName.id;
+                            }
+                        }
+
+                        let rawType = String(t.type || 'expense').trim().toLowerCase();
+                        if (rawType.startsWith('rec')) rawType = 'income';
+                        else if (rawType.startsWith('desp')) rawType = 'expense';
+                        else if (rawType.startsWith('inv')) rawType = 'investment';
+                        else if (rawType.startsWith('transf')) rawType = 'transfer';
+
+                        return {
+                            id: t.id || String(Date.now() + Math.random()),
+                            description: t.description || 'Lançamento',
+                            notes: t.notes || '',
+                            originalAmount: original,
+                            interestPenalty: interest,
+                            taxes: taxes,
+                            amount: total,
+                            month: isNaN(resolvedMonth) ? 0 : resolvedMonth,
+                            year: resolvedYear,
+                            operationDate: cleanOpDate,
+                            dueDate: cleanDueDate,
+                            categoryId: resolvedCatId,
+                            subcategoryId: resolvedSubId,
+                            type: rawType,
+                            paymentMethod: payMethod,
+                            cardId: t.cardId || (payMethod === 'card' ? (appState.creditCards[0]?.id || null) : null),
+                            paid: !!t.paid,
+                            isFixed: !!t.isFixed,
+                            fixedSeriesId: t.fixedSeriesId || null,
+                            isRefund: !!t.isRefund,
+                            currentInstallment: Number(t.currentInstallment) || 1,
+                            totalInstallments: Number(t.totalInstallments) || 1,
+                            transferDirection: t.transferDirection || null
+                        };
+                    });
+                }
+
+                if (data.lastModified) {
+                    const d = new Date(data.lastModified);
+                    updateSyncTimestamp(isNaN(d.getTime()) ? new Date() : d);
+                } else {
+                    updateSyncTimestamp();
+                }
+
+                sortCategoriesAndSubcategories();
+                populateCategoryDropdowns();
+                populateCreditCardDropdowns();
+                saveToLocalStorage();
+                refreshUI();
+
+                updatePostLoginSyncModal(
+                    100,
+                    'Sincronização Concluída!',
+                    `${appState.transactions.length} lançamentos atualizados com sucesso. Abrindo o aplicativo...`,
+                    'success'
+                );
+
+                await new Promise(r => setTimeout(r, 450));
+                finalizeEnterApplicationAfterSync(prof, options);
+            } catch (err) {
+                console.error('Erro na sincronização pós-login com o Google Drive:', err);
+                updatePostLoginSyncModal(
+                    100,
+                    'Não foi possível sincronizar com o Google Drive',
+                    'Verifique sua conexão com a internet ou a URL do Google Apps Script. Você pode tentar novamente ou continuar com os dados locais.',
+                    'error'
+                );
+            }
+        }
+
         async function handleProfileLoginSubmit(e) {
             e.preventDefault();
             const userInp = document.getElementById('authUsernameInput');
@@ -15336,23 +15810,9 @@ function doGet(e) {
                 loadProfileStateIntoApp(prof.id);
             }
 
-            // Se autenticou via Google Drive e ainda não há lançamentos locais neste navegador, baixa os dados do perfil
-            if (syncedFromDrive && appState.appsScriptUrl && appState.transactions.length === 0) {
-                try {
-                    await restoreFromAppsScript();
-                } catch (err) {}
-            }
-
-            const overlay = document.getElementById('authGateOverlay');
-            if (overlay) overlay.classList.add('auth-gate-hidden');
-            showToast(`Bem-vindo(a), ${prof.name}!`);
-
-            // Primeiro acesso sem nome de usuário definido: abre imediatamente o modal Perfil & Ícone para criar o usuário
-            if (!prof.username || !prof.username.trim()) {
-                setTimeout(() => {
-                    openUserProfileModal(false, true);
-                }, 280);
-            }
+            await runPostLoginDriveSyncAndEnterApp(prof, {
+                promptUsernameSetup: (!prof.username || !prof.username.trim())
+            });
         }
 
         function toggleAuthResetPasswordMode(showReset) {
@@ -15447,13 +15907,8 @@ function doGet(e) {
                 loadProfileStateIntoApp(prof.id);
             }
 
-            const overlay = document.getElementById('authGateOverlay');
-            if (overlay) overlay.classList.add('auth-gate-hidden');
             showToast(p1 ? `Senha do perfil "${prof.name}" redefinida com sucesso!` : `Senha removida do perfil "${prof.name}"!`);
-
-            if (appState.appsScriptUrl) {
-                checkAndBackupViaAppsScript(true);
-            }
+            runPostLoginDriveSyncAndEnterApp(prof, { pushProfilesFirst: true });
         }
 
         function toggleAuthCreateProfileMode(showCreate) {
