@@ -1166,6 +1166,7 @@ h1, h2, h3, h4, .hero-hi,
     #modalColumnMapper,
     #modalCardInvoiceHistory,
     #modalCardInvoice,
+    #modalCardRecentTransactions,
     #modalSubcategoryTransactions,
     #modalUserProfile,
     #modalHeroDesign,
@@ -4208,7 +4209,7 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
                             </div>
                         </div>
                         <div class="flex flex-col sm:flex-row items-center gap-4">
-                            <div class="relative w-full sm:w-[54%] h-72" style="cursor:pointer">
+                            <div class="relative w-full sm:w-[54%] h-80" style="cursor:pointer">
                                 <canvas id="categoryPieChart"></canvas>
                             </div>
                             <div id="pieLegend" class="w-full sm:flex-1 min-w-0 text-sm space-y-1 pr-1"></div>
@@ -4363,7 +4364,7 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
                             </div>
                         </div>
                         <div class="flex flex-col sm:flex-row items-center gap-4">
-                            <div class="relative w-full sm:w-[54%] h-72" style="cursor:pointer">
+                            <div class="relative w-full sm:w-[54%] h-80" style="cursor:pointer">
                                 <canvas id="modalityPieChart"></canvas>
                             </div>
                             <div id="modalityPieLegend" class="w-full sm:flex-1 min-w-0 text-sm space-y-1 pr-1"></div>
@@ -4794,7 +4795,7 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
                 </div>
 
                 <!-- GRADE DE CARDS DAS TRANSAÇÕES -->
-                <div id="transactionCardsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+                <div id="transactionCardsGrid" class="grid grid-cols-1 gap-3"></div>
 
                 <!-- TOTALIZADOR CONSOLIDADO DO HISTÓRICO -->
                 <div id="transactionTableFoot" class="glass-card rounded-2xl p-4"></div>
@@ -5516,6 +5517,62 @@ html.dark.glass-ui :is(#view-transactions, #view-investments, #view-matrix, #vie
             <div class="p-4 bg-slate-50 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <span id="invoiceModalCount" class="text-xs font-semibold text-slate-500 dark:text-slate-400">0 lançamentos</span>
                 <button type="button" onclick="closeModal('cardInvoice')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ÚLTIMOS LANÇAMENTOS DO CARTÃO DE CRÉDITO -->
+    <div id="modalCardRecentTransactions" onclick="if(event.target===this) closeModal('cardRecentTransactions')" class="fixed inset-0 z-[55] bg-slate-900/50 dark:bg-slate-950/80 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="glass-card rounded-3xl max-w-5xl w-full shadow-2xl border border-white/80 dark:border-white/10 overflow-hidden flex flex-col max-h-[88vh]">
+            <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div id="recentCardTxIconBox" class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-base shadow-sm shrink-0">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                    <div>
+                        <h3 id="recentCardTxTitle" class="text-base font-bold text-white">Últimos Lançamentos</h3>
+                        <p id="recentCardTxSubtitle" class="text-xs text-white/80">Clique sobre uma transação para ver os detalhes</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeModal('cardRecentTransactions')" class="text-white/80 hover:text-white text-lg p-1.5">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-200/70 dark:border-slate-800 grid grid-cols-3 gap-3 text-center">
+                <div class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                    <span class="text-[10px] font-bold text-slate-400 block">Total Exibido</span>
+                    <strong id="recentCardTxTotal" class="text-sm font-black text-slate-900 dark:text-white mt-0.5 block">R$ 0,00</strong>
+                </div>
+                <div class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                    <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">Quitado</span>
+                    <strong id="recentCardTxPaid" class="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5 block">R$ 0,00</strong>
+                </div>
+                <div class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 block">Em Aberto</span>
+                    <strong id="recentCardTxPending" class="text-sm font-black text-amber-700 dark:text-amber-400 mt-0.5 block">R$ 0,00</strong>
+                </div>
+            </div>
+
+            <div class="overflow-auto custom-scrollbar flex-1">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="sticky top-0 z-10 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                        <tr class="text-slate-700 dark:text-slate-200 font-bold">
+                            <th class="p-3">Descrição</th>
+                            <th class="p-3">Categoria / Subcategoria</th>
+                            <th class="p-3 text-center">Data Operação</th>
+                            <th class="p-3 text-center">Vencimento</th>
+                            <th class="p-3 text-right">Valor</th>
+                            <th class="p-3 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentCardTxTableBody" class="divide-y divide-slate-200/60 dark:divide-slate-800 text-slate-700 dark:text-slate-200"></tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <span id="recentCardTxCount" class="text-xs font-semibold text-slate-500 dark:text-slate-400">0 lançamentos</span>
+                <button type="button" onclick="closeModal('cardRecentTransactions')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl">Fechar</button>
             </div>
         </div>
     </div>
@@ -8733,11 +8790,180 @@ function doGet(e) {
             }
         }
 
+        let cloudSyncCheckInProgress = false;
+
+        async function checkCloudVersionAndSyncSilently() {
+            if (!appState.appsScriptUrl) return;
+            if (cloudSyncCheckInProgress || silentBackupQueueRunning) return;
+
+            // Evita interferir enquanto a tela de login ou sincronização inicial estiver aberta
+            const authOverlay = document.getElementById('authGateOverlay');
+            const postSyncModal = document.getElementById('modalPostLoginSync');
+            if ((authOverlay && !authOverlay.classList.contains('auth-gate-hidden')) ||
+                (postSyncModal && !postSyncModal.classList.contains('hidden'))) {
+                return;
+            }
+
+            cloudSyncCheckInProgress = true;
+            try {
+                const pid = encodeURIComponent(appState.activeProfileId || 'default');
+                const checkUrl = appState.appsScriptUrl + (appState.appsScriptUrl.includes('?') ? '&' : '?') + 'checkVersion=1&profileId=' + pid;
+                const checkRes = await fetch(checkUrl);
+                const checkData = await checkRes.json();
+
+                if (!checkData || checkData.status !== 'success') return;
+
+                if (Array.isArray(checkData.profiles) && checkData.profiles.length > 0) {
+                    mergeRemoteProfiles(checkData.profiles);
+                }
+
+                if (checkData.lastModified) {
+                    const serverTimestamp = new Date(checkData.lastModified).getTime();
+                    const localTimestamp = appState.lastSyncIsoTimestamp ? new Date(appState.lastSyncIsoTimestamp).getTime() : 0;
+
+                    // Se houver versão mais recente na nuvem, baixa e atualiza os dados silenciosamente
+                    if (!isNaN(serverTimestamp) && serverTimestamp > localTimestamp + 3000) {
+                        const restoreUrl = appState.appsScriptUrl + (appState.appsScriptUrl.includes('?') ? '&' : '?') + 'profileId=' + pid;
+                        const response = await fetch(restoreUrl);
+                        const data = await response.json();
+
+                        if (data && data.status === 'success') {
+                            if (Array.isArray(data.profiles) && data.profiles.length > 0) {
+                                mergeRemoteProfiles(data.profiles);
+                            }
+                            if (data.walletBalance !== undefined) {
+                                appState.walletBalance = Number(data.walletBalance) || 0;
+                            }
+                            if (Array.isArray(data.categories) && data.categories.length > 0) {
+                                appState.categories = data.categories.map(c => ({
+                                    id: c.id,
+                                    name: c.name,
+                                    icon: c.icon || 'fa-tag',
+                                    color: c.color || '#10b981',
+                                    budget: Number(c.budget) || 0,
+                                    type: c.type || 'expense',
+                                    hidden: !!c.hidden,
+                                    subcategories: (c.subcategories || []).map(s => ({
+                                        id: s.id,
+                                        name: s.name,
+                                        hidden: !!s.hidden
+                                    }))
+                                }));
+                            }
+                            if (Array.isArray(data.creditCards) && data.creditCards.length > 0) {
+                                appState.creditCards = data.creditCards.map(c => ({
+                                    id: c.id,
+                                    name: c.name,
+                                    limit: Number(c.limit) || 0,
+                                    color: c.color || '#820ad1',
+                                    dueDay: Number(c.dueDay) || 10,
+                                    closingDay: Number(c.closingDay) || 1,
+                                    dynamicDueDate: !!c.dynamicDueDate
+                                }));
+                            }
+                            if (data.bankAccountConfig && data.bankAccountConfig.name) {
+                                appState.bankAccountConfig = data.bankAccountConfig;
+                            }
+                            if (Array.isArray(data.transactions)) {
+                                appState.transactions = data.transactions.filter(t => !(t.description || '').includes('Reajuste de Saldo - Carteira')).map(t => {
+                                    const original = Number(t.originalAmount) || Number(t.amount) || 0;
+                                    const interest = Number(t.interestPenalty) || 0;
+                                    const taxes = Number(t.taxes) || 0;
+                                    const total = Number(t.amount) || (original + interest + taxes);
+                                    const cleanDueDate = normalizeDateString(t.dueDate);
+                                    const cleanOpDate = normalizeDateString(t.operationDate) || cleanDueDate;
+
+                                    let resolvedMonth = Number(t.month);
+                                    let resolvedYear = Number(t.year) || 2026;
+                                    if (cleanDueDate && cleanDueDate.includes('-')) {
+                                        const p = cleanDueDate.split('-');
+                                        if (p.length === 3) {
+                                            resolvedYear = Number(p[0]);
+                                            resolvedMonth = Number(p[1]) - 1;
+                                        }
+                                    }
+
+                                    let payMethod = String(t.paymentMethod || 'bank').toLowerCase();
+                                    if (payMethod === 'wallet' || payMethod.includes('carteira')) payMethod = 'wallet';
+                                    else if (payMethod.includes('cart') || t.cardId) payMethod = 'card';
+                                    else payMethod = 'bank';
+
+                                    let resolvedCatId = String(t.categoryId || '').trim();
+                                    let matchedCat = appState.categories.find(c => c.id === resolvedCatId);
+                                    if (!matchedCat && resolvedCatId) {
+                                        matchedCat = appState.categories.find(c => c.name.toLowerCase() === resolvedCatId.toLowerCase());
+                                        if (matchedCat) resolvedCatId = matchedCat.id;
+                                    }
+                                    if (!matchedCat) {
+                                        resolvedCatId = (t.type === 'income') ? 'cat_salario' : (t.type === 'investment' || t.type === 'transfer' ? 'cat_investimentos' : 'cat_moradia');
+                                        matchedCat = appState.categories.find(c => c.id === resolvedCatId);
+                                    }
+
+                                    let resolvedSubId = String(t.subcategoryId || '').trim();
+                                    if (resolvedSubId && matchedCat && Array.isArray(matchedCat.subcategories)) {
+                                        const subById = matchedCat.subcategories.find(s => s.id === resolvedSubId);
+                                        if (!subById) {
+                                            const subByName = matchedCat.subcategories.find(s => s.name.toLowerCase() === resolvedSubId.toLowerCase());
+                                            if (subByName) resolvedSubId = subByName.id;
+                                        }
+                                    }
+
+                                    let rawType = String(t.type || 'expense').trim().toLowerCase();
+                                    if (rawType.startsWith('rec')) rawType = 'income';
+                                    else if (rawType.startsWith('desp')) rawType = 'expense';
+                                    else if (rawType.startsWith('inv')) rawType = 'investment';
+                                    else if (rawType.startsWith('transf')) rawType = 'transfer';
+
+                                    return {
+                                        id: t.id || String(Date.now() + Math.random()),
+                                        description: t.description || 'Lançamento',
+                                        notes: t.notes || '',
+                                        originalAmount: original,
+                                        interestPenalty: interest,
+                                        taxes: taxes,
+                                        amount: total,
+                                        month: isNaN(resolvedMonth) ? 0 : resolvedMonth,
+                                        year: resolvedYear,
+                                        operationDate: cleanOpDate,
+                                        dueDate: cleanDueDate,
+                                        categoryId: resolvedCatId,
+                                        subcategoryId: resolvedSubId,
+                                        type: rawType,
+                                        paymentMethod: payMethod,
+                                        cardId: t.cardId || (payMethod === 'card' ? (appState.creditCards[0]?.id || null) : null),
+                                        paid: !!t.paid,
+                                        isFixed: !!t.isFixed,
+                                        fixedSeriesId: t.fixedSeriesId || null,
+                                        isRefund: !!t.isRefund,
+                                        currentInstallment: Number(t.currentInstallment) || 1,
+                                        totalInstallments: Number(t.totalInstallments) || 1,
+                                        transferDirection: t.transferDirection || null
+                                    };
+                                });
+                            }
+
+                            const d = new Date(data.lastModified);
+                            updateSyncTimestamp(isNaN(d.getTime()) ? new Date() : d);
+                            sortCategoriesAndSubcategories();
+                            populateCategoryDropdowns();
+                            populateCreditCardDropdowns();
+                            saveToLocalStorage();
+                            refreshUI();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn("Falha na verificação automática de versão (1 min):", err);
+            } finally {
+                cloudSyncCheckInProgress = false;
+            }
+        }
+
         function setupAutoBackup() {
             if (autoBackupInterval) clearInterval(autoBackupInterval);
             autoBackupInterval = setInterval(() => {
-                checkAndBackupViaAppsScript(true);
-            }, 15 * 60 * 1000);
+                checkCloudVersionAndSyncSilently();
+            }, 60 * 1000);
         }
 
         function isInvestmentWithdrawal(t) {
@@ -11473,6 +11699,21 @@ function doGet(e) {
             const pieTotal = pieItems.reduce((a, x) => a + x.val, 0);
             const fmtPct = v => v.toFixed(1).replace('.', ',') + '%';
 
+            const pieCircleShadowPlugin = {
+                id: 'pieCircleShadowPlugin',
+                beforeDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    ctx.save();
+                    ctx.shadowColor = isDark ? 'rgba(0, 0, 0, 0.62)' : 'rgba(15, 23, 42, 0.25)';
+                    ctx.shadowBlur = 18;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 9;
+                },
+                afterDatasetsDraw(chart) {
+                    chart.ctx.restore();
+                }
+            };
+
             const pieInnerPctPlugin = {
                 id: 'pieInnerPct',
                 afterDatasetsDraw(chart) {
@@ -11528,7 +11769,7 @@ function doGet(e) {
                         responsive: true,
                         maintainAspectRatio: false,
                         cutout: '36%',
-                        layout: { padding: 4 },
+                        layout: { padding: { top: 14, left: 18, right: 18, bottom: 34 } },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
@@ -11546,7 +11787,7 @@ function doGet(e) {
                             }
                         }
                     },
-                    plugins: [pieInnerPctPlugin]
+                    plugins: [pieCircleShadowPlugin, pieInnerPctPlugin]
                 });
             }
 
@@ -11627,7 +11868,7 @@ function doGet(e) {
                         responsive: true,
                         maintainAspectRatio: false,
                         cutout: '36%',
-                        layout: { padding: 4 },
+                        layout: { padding: { top: 14, left: 18, right: 18, bottom: 34 } },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
@@ -11645,7 +11886,7 @@ function doGet(e) {
                             }
                         }
                     },
-                    plugins: [pieInnerPctPlugin]
+                    plugins: [pieCircleShadowPlugin, pieInnerPctPlugin]
                 });
             }
 
@@ -12079,6 +12320,9 @@ function doGet(e) {
                 <button type="button" role="menuitem" onclick="cardActionsMenuRun('invoice', '${cardId}')" class="${itemCls}">
                     <i class="fa-solid fa-file-invoice-dollar w-4 text-center text-teal-600 dark:text-teal-400"></i> Ver Fatura
                 </button>
+                <button type="button" role="menuitem" onclick="cardActionsMenuRun('recent', '${cardId}')" class="${itemCls}">
+                    <i class="fa-solid fa-receipt w-4 text-center text-blue-600 dark:text-blue-400"></i> Últimos Lançamentos
+                </button>
                 <button type="button" role="menuitem" onclick="cardActionsMenuRun('history', '${cardId}')" class="${itemCls}">
                     <i class="fa-solid fa-clock-rotate-left w-4 text-center text-indigo-600 dark:text-indigo-400"></i> Histórico de Faturas
                 </button>`;
@@ -12094,12 +12338,112 @@ function doGet(e) {
             cardActionsMenuEl = menu;
         }
 
+        let lastCardRecentContext = null;
+
         function cardActionsMenuRun(action, cardId) {
             closeCardActionsMenu();
             if (action === 'expense') openQuickCardExpense(cardId, null);
             else if (action === 'refund') openQuickCardRefund(cardId, null);
             else if (action === 'invoice') viewCardInvoice(cardId, null);
+            else if (action === 'recent') openCardRecentTransactionsModal(cardId);
             else if (action === 'history') openCardInvoiceHistoryModal(cardId);
+        }
+
+        function openCardRecentTransactionsModal(cardId) {
+            const cardObj = appState.creditCards.find(c => c.id === cardId);
+            if (!cardObj) return;
+
+            lastCardRecentContext = { cardId };
+
+            const titleEl = document.getElementById('recentCardTxTitle');
+            const subEl = document.getElementById('recentCardTxSubtitle');
+            const iconBox = document.getElementById('recentCardTxIconBox');
+            const totalEl = document.getElementById('recentCardTxTotal');
+            const paidEl = document.getElementById('recentCardTxPaid');
+            const pendingEl = document.getElementById('recentCardTxPending');
+            const tbody = document.getElementById('recentCardTxTableBody');
+            const countEl = document.getElementById('recentCardTxCount');
+
+            if (titleEl) titleEl.textContent = `Últimos Lançamentos · ${cardObj.name}`;
+            if (subEl) subEl.textContent = `Operações mais recentes no cartão • Clique sobre uma transação para ver os detalhes`;
+            if (iconBox) iconBox.style.backgroundColor = cardObj.color || '#820ad1';
+
+            const allCardTxs = appState.transactions.filter(t => {
+                const isCard = (t.paymentMethod || 'bank') === 'card';
+                const cId = t.cardId || (appState.creditCards[0] ? appState.creditCards[0].id : null);
+                return isCard && cId === cardId;
+            }).sort((a, b) => {
+                const opA = normalizeDateString(a.operationDate) || normalizeDateString(a.dueDate) || '';
+                const opB = normalizeDateString(b.operationDate) || normalizeDateString(b.dueDate) || '';
+                if (opB !== opA) return opB.localeCompare(opA);
+                return String(b.id || '').localeCompare(String(a.id || ''));
+            });
+
+            const txs = allCardTxs.slice(0, 30);
+
+            let sumExp = 0, sumRef = 0, sumPaid = 0, sumPend = 0;
+            txs.forEach(t => {
+                const orig = Number(t.originalAmount) || 0;
+                const juros = Number(t.interestPenalty) || 0;
+                const taxes = Number(t.taxes) || 0;
+                const amt = (juros > 0 || taxes > 0) ? (orig + juros + taxes) : (Number(t.amount) || orig);
+                if (t.type === 'expense') {
+                    sumExp += amt;
+                    if (t.paid) sumPaid += amt;
+                    else sumPend += amt;
+                } else if (t.type === 'income' && t.isRefund) {
+                    sumRef += amt;
+                }
+            });
+
+            if (totalEl) totalEl.textContent = formatBRL(Math.max(0, sumExp - sumRef));
+            if (paidEl) paidEl.textContent = formatBRL(sumPaid);
+            if (pendingEl) pendingEl.textContent = formatBRL(sumPend);
+            if (countEl) countEl.textContent = `${txs.length} último${txs.length === 1 ? '' : 's'} lançamento${txs.length === 1 ? '' : 's'}`;
+
+            if (tbody) {
+                if (txs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-400 text-xs">Nenhum lançamento registrado neste cartão.</td></tr>`;
+                } else {
+                    tbody.innerHTML = txs.map(t => {
+                        const cat = appState.categories.find(c => c.id === t.categoryId);
+                        const sub = cat && cat.subcategories ? cat.subcategories.find(s => s.id === t.subcategoryId) : null;
+                        const cleanDue = normalizeDateString(t.dueDate);
+                        const dueFmt = cleanDue && cleanDue.includes('-') ? cleanDue.split('-').reverse().join('/') : '-';
+                        const cleanOp = normalizeDateString(t.operationDate) || cleanDue;
+                        const opFmt = cleanOp && cleanOp.includes('-') ? cleanOp.split('-').reverse().join('/') : '-';
+                        const isRefund = !!t.isRefund;
+                        const isPaid = !!t.paid;
+                        const hasInst = (t.totalInstallments || 1) > 1;
+
+                        const statusBadge = isRefund
+                            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300">Estorno</span>`
+                            : (isPaid
+                                ? `<button onclick="event.stopPropagation(); toggleTransactionPaid('${t.id}'); openCardRecentTransactionsModal('${cardId}');" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 cursor-pointer">Quitado</button>`
+                                : `<button onclick="event.stopPropagation(); toggleTransactionPaid('${t.id}'); openCardRecentTransactionsModal('${cardId}');" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 cursor-pointer">Aberto</button>`);
+
+                        return `
+                            <tr onclick="openTransactionDetailsModal('${t.id}', false, 'cardRecentTransactions')" class="glass-table-row cursor-pointer">
+                                <td class="p-3 font-semibold text-slate-900 dark:text-white">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="truncate max-w-[220px]">${t.description}</span>
+                                        ${hasInst ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300">${t.currentInstallment}/${t.totalInstallments}</span>` : ''}
+                                        ${t.isFixed ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300">Fixa</span>` : ''}
+                                    </div>
+                                </td>
+                                <td class="p-3 text-slate-600 dark:text-slate-300">${cat ? cat.name : '-'}${sub ? ' > ' + sub.name : ''}</td>
+                                <td class="p-3 text-center text-slate-500 dark:text-slate-400">${opFmt}</td>
+                                <td class="p-3 text-center font-semibold text-slate-700 dark:text-slate-200">${dueFmt}</td>
+                                <td class="p-3 text-right whitespace-nowrap font-bold ${isRefund ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}">${isRefund ? '- ' : ''}${formatBRL(t.amount)}</td>
+                                <td class="p-3 text-center">${statusBadge}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            const modal = document.getElementById('modalCardRecentTransactions');
+            if (modal) modal.classList.remove('hidden');
         }
 
         function viewCardInvoice(cardId, event) {
@@ -13528,7 +13872,7 @@ function doGet(e) {
                                     <i class="fa-solid ${cat ? cat.icon : (t.type === 'transfer' ? 'fa-arrow-right-arrow-left' : 'fa-receipt')}"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <h4 class="text-xs sm:text-sm font-extrabold ${isPaid ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'} truncate" title="${t.description}">
+                                    <h4 class="text-sm sm:text-base font-extrabold tracking-tight ${isPaid ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white'} truncate" title="${t.description}">
                                         ${t.description}
                                     </h4>
                                     <p class="text-[11px] ${isPaid ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400'} truncate mt-0.5">
@@ -13552,7 +13896,7 @@ function doGet(e) {
                                 ${dueUrgencyBadge}
                                 ${t.notes ? '<i class="fa-regular fa-note-sticky text-amber-500 text-[11px] ml-0.5" title="Possui observações"></i>' : ''}
                             </div>
-                            <div class="inline-flex items-center gap-1.5 text-sm sm:text-base font-black ${isPaid ? 'text-slate-500 dark:text-slate-400' : valueColor} whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1.5 text-base sm:text-lg font-black tracking-tight ${isPaid ? 'text-slate-500 dark:text-slate-400' : valueColor} whitespace-nowrap">
                                 <span>${signPrefix}${formatBRL(t.amount)}</span>
                                 ${hasInterest ? `
                                     <div class="tooltip-container">
@@ -14310,6 +14654,7 @@ function doGet(e) {
                 'deleteCategoryConfirm': 'modalDeleteCategoryConfirm',
                 'cardManager': 'modalCardManager',
                 'cardInvoice': 'modalCardInvoice',
+                'cardRecentTransactions': 'modalCardRecentTransactions',
                 'cardInvoiceHistory': 'modalCardInvoiceHistory',
                 'userProfile': 'modalUserProfile',
                 'heroDesign': 'modalHeroDesign',
@@ -14355,6 +14700,8 @@ function doGet(e) {
                         if (parentInvoiceHistoryCardId) {
                             openCardInvoiceHistoryModal(parentInvoiceHistoryCardId);
                         }
+                    } else if (ctx.parentModal === 'cardRecentTransactions' && lastCardRecentContext) {
+                        openCardRecentTransactionsModal(lastCardRecentContext.cardId);
                     } else if (ctx.parentModal === 'subcategoryTransactions' && lastSubcategoryModalContext) {
                         openSubcategoryTransactionsModal(lastSubcategoryModalContext.catId, lastSubcategoryModalContext.subId);
                     }
